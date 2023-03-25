@@ -1,65 +1,79 @@
-import torch
-import pandas as pd
-import numpy as np
-from matplotlib import pyplot as plt
+import time
 
 import auto_esn.utils.dataset_loader as dl
-from auto_esn.datasets.df import MackeyGlass
-from auto_esn.esn.esn import GroupedDeepESN, DeepESN
-from auto_esn.esn.reservoir.util import NRMSELoss
-from auto_esn.esn.reservoir.activation import tanh
-import time
+import numpy as np
+import pandas as pd
+import torch
+from auto_esn.esn.esn import DeepESN
+from matplotlib import pyplot as plt
+
+
+class ReservoirResult:
+    def __init__(self, X, y, X_test, y_test, res):
+        self.X = X
+        self.y = y
+        self.X_test = X_test
+        self.y_test = y_test
+        self.res = res
 
 
 class Reservoir:
 
     def __init__(self, prices, prediction_start, prediction_end):
         self.prices = prices
+        self.min_val = pd.Series(prices).min()
+        self.max_val = pd.Series(prices).max()
+        self.normalized_prices = self.normalize()
         self.prediction_start = prediction_start
         self.prediction_end = prediction_end
 
     def normalize(self):
-        min_val = pd.Series(self.prices).min()
-        max_val = pd.Series(self.prices).max()
-        df = pd.DataFrame((self.prices - min_val) / (max_val - min_val))
+        df = pd.DataFrame((self.prices - self.min_val) / (self.max_val - self.min_val))
         df.columns = ["y"]
-        self.prices = df
+        return df
 
-    def get_rms(self, true, predicted):
-        return round(np.sqrt(np.mean((predicted - true) ** 2)), 3)
+    def denormalize(self, prices):
+        return prices * (self.max_val - self.min_val) + self.min_val
 
-    def extrapolate(self):
+    def extrapolate_and_measure(self, params: dict):
         start_time = time.time_ns()
-        mg17 = dl.loader_explicit(self.prices, test_size=self.prediction_end-self.prediction_start)
+        extrapolation = self.extrapolate(params)
+        elapsed_time = round((time.time_ns() - start_time) / 1e6)
+        rms = self.calculate_rms(extrapolation)
+        return elapsed_time, rms
+
+    def calculate_rms(self, result: ReservoirResult):
+        actual_data = self.prices[self.prediction_start:self.prediction_end].values
+        prediction = (self.denormalize(result.res).numpy())
+        return round(np.sqrt(np.mean((prediction - actual_data) ** 2)), 3)
+
+    def extrapolate(self, params: dict) -> ReservoirResult:
+        mg17 = dl.loader_explicit(self.normalized_prices, test_size=self.prediction_end - self.prediction_start)
         X, X_test, y, y_test = mg17()
 
         esn = DeepESN(num_layers=2,
                       hidden_size=100)
 
-        # fit
         esn.fit(X, y)
 
-        # esn already has the state after consuming whole training dataset
-        # let's start from first element in test dataset and let it extrapolate further
-        val = X_test[0:1]
-        result = []
-        for j in range(self.prediction_end-self.prediction_start):
-            val = esn(val)
-            result.append(val)
+        point_to_predict = X_test[0:1]
+        predictions = []
+        for j in range(self.prediction_end - self.prediction_start):
+            predicted_value = esn(point_to_predict)
+            predictions.append(predicted_value)
 
-        res = torch.vstack(result)
-        elapsed_time = (time.time_ns() - start_time) / 1e6
-        print(f"Execution time: {round(elapsed_time, 2)} [ms]")
+        res = torch.vstack(predictions)
+        return ReservoirResult(X, y, X_test, y_test, res)
 
-        return X, y, res, X_test, y_test, elapsed_time
+    @staticmethod
+    def plot_extrapolation(result: ReservoirResult):
+        predicted = np.hstack(
+            [result.X.view(-1).detach().numpy()[:result.X.shape[0]], result.res.view(-1).detach().numpy()])
+        true = np.hstack(
+            [result.y.view(-1).detach().numpy()[:result.X.shape[0]], result.y_test.view(-1).detach().numpy()])
 
-    def plot(self, X, y, res, X_test, y_test):
-        # plot validation set
-        predicted = np.hstack([X.view(-1).detach().numpy()[:X.shape[0]], res.view(-1).detach().numpy()])
-        true = np.hstack([y.view(-1).detach().numpy()[:X.shape[0]], y_test.view(-1).detach().numpy()])
-
-        plt.plot(range(X.shape[0] + X_test.shape[0]), predicted, 'r', label='predicted')
-        plt.plot(range(X.shape[0] + X_test.shape[0]), true, 'b', label='true')
-        plt.axvline(x=X.shape[0], color='g', label='extrapolation start')
+        plt.plot(range(result.X.shape[0] + result.X_test.shape[0]), predicted, 'r', label='predicted')
+        plt.plot(range(result.X.shape[0] + result.X_test.shape[0]), true, 'b', label='true')
+        plt.axvline(x=result.X.shape[0], color='g', label='extrapolation start')
         plt.legend()
         plt.show()

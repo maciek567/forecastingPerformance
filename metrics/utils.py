@@ -19,6 +19,18 @@ class Incomplete(Enum):
     HIGHLY = "highly"
 
 
+class DefectionScale(Enum):
+    NONE = "undamaged"
+    SLIGHTLY = "slightly"
+    MODERATELY = "moderately"
+    HIGHLY = "highly"
+
+
 class DefectionRange(Enum):
     ALL = "all"
     PARTIAL = "partially"
+
+
+class DefectsSource(Enum):
+    NOISE = "noise"
+    INCOMPLETENESS = "incompleteness"
