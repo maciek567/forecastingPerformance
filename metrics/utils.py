@@ -32,5 +32,6 @@ class DefectionRange(Enum):
 
 
 class DefectsSource(Enum):
+    NONE = "no defects"
     NOISE = "noise"
     INCOMPLETENESS = "incompleteness"

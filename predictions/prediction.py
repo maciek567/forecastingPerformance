@@ -7,24 +7,24 @@ from timeseries.timeseries import StockMarketSeries
 from timeseries.utils import SeriesColumn
 
 
-class Prediction:
+class PredictionModel:
 
-    def __init__(self, stock: StockMarketSeries, method, prediction_start: int, prediction_end: int,
+    def __init__(self, stock: StockMarketSeries, method, prediction_start: int,
                  defect_range: DefectionRange, defect_source: DefectsSource, column: SeriesColumn,
                  iterations: int = 5, **kwargs):
         self.stock = stock
         self.method = method
-        self.prediction_start = prediction_start
-        self.prediction_end = prediction_end
+        self.prediction_start = prediction_start - stock.time_series_start
         self.column = column
         self.iterations = iterations
-        self.series = stock.series
+        self.real_series = stock.real_series
+        self.defects_source = defect_source
         self.series_defected = self.get_series_defected(defect_range, defect_source)
-        self.model = self.create_model(self.series)
+        self.model = self.create_model(self.real_series)
         self.model_defected = self.create_model_defected(self.series_defected)
         self.additional_params = kwargs
 
-    def get_series_defected(self, defect_range, defect_source):
+    def get_series_defected(self, defect_range: DefectionRange, defect_source: DefectsSource):
         series_defected = None
         if defect_range == DefectionRange.ALL and defect_source == DefectsSource.NOISE:
             series_defected = self.stock.all_series_noised
@@ -36,11 +36,12 @@ class Prediction:
             series_defected = self.stock.partially_incomplete
         return series_defected
 
-    def create_model(self, series):
-        return self.method(series[self.column], self.prediction_start, self.prediction_end)
+    def create_model(self, series: dict):
+        return self.method(series[self.column], self.prediction_start, self.column, DefectsSource.NONE)
 
-    def create_model_defected(self, series):
-        return {defect_scale: self.method(series[defect_scale][self.column], self.prediction_start, self.prediction_end)
+    def create_model_defected(self, series: dict):
+        return {defect_scale: self.method(series[defect_scale][self.column], self.prediction_start, self.column,
+                                          self.defects_source)
                 for defect_scale in Strength}
 
     def present_prediction(self, strength: Strength = None):

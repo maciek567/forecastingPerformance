@@ -15,37 +15,21 @@ class Defection:
 
 
 class StockMarketSeries:
-    def __init__(self):
-        self.company_name = ""
-        self.path = ""
-        self.time_series_start = None
-        self.time_series_end = None
-        self.data = None
-        self.series = None
-        self.all_noises_strength = {Strength.WEAK: 0.4, Strength.MODERATE: 1.0, Strength.STRONG: 3.0}
-        self.all_series_noised = None
-        self.all_incomplete_parts = {Incomplete.SLIGHTLY: 0.05, Incomplete.MODERATELY: 0.12, Incomplete.HIGHLY: 0.3}
-        self.all_series_incomplete = None
-        self.partially_noised_strength = None
-        self.partially_noised = None
-        self.partially_incomplete_parts = None
-        self.partially_incomplete = None
-
-    def prepare_time_series(self, company_name: str, path: str, time_series_start: int, time_series_end: int,
-                            all_noises_strength: dict = None, all_incomplete_parts: dict = None,
-                            partially_noised_strength: dict = None, partially_incomplete_parts: dict = None):
+    def __init__(self, company_name: str, path: str, time_series_start: int, time_series_end: int,
+                 all_noises_strength: dict = None, all_incomplete_parts: dict = None,
+                 partially_noised_strength: dict = None, partially_incomplete_parts: dict = None):
         self.company_name = company_name
         self.path = path
         self.time_series_start = time_series_start
         self.time_series_end = time_series_end
         self.data = pd.read_csv(self.path)
-        self.series = self.create_multiple_series()
-        if all_noises_strength is not None:
-            self.all_noises_strength = all_noises_strength
+        self.real_series = self.create_multiple_series()
+        self.all_noises_strength = all_noises_strength if all_noises_strength is not None \
+            else {Strength.WEAK: 0.4, Strength.MODERATE: 1.0, Strength.STRONG: 3.0}
         self.all_series_noised = \
             {strength: self.noise_all_series(self.all_noises_strength[strength]) for strength in Strength}
-        if all_incomplete_parts is not None:
-            self.all_incomplete_parts = all_incomplete_parts
+        self.all_incomplete_parts = all_incomplete_parts if all_incomplete_parts is not None \
+            else {Incomplete.SLIGHTLY: 0.05, Incomplete.MODERATELY: 0.12, Incomplete.HIGHLY: 0.3}
         self.all_series_incomplete = \
             {incomplete: self.add_incompleteness_to_all_series(self.all_incomplete_parts[incomplete])
              for incomplete in Incomplete}
@@ -77,12 +61,12 @@ class StockMarketSeries:
         incompleteness = np.random.choice([0, 1], self.time_series_end - self.time_series_start,
                                           p=[incomplete_part, 1.0 - incomplete_part])
         incomplete_data = []
-        for i in range(self.time_series_start, self.time_series_end):
+        for i in range(0, self.time_series_end - self.time_series_start):
             if incompleteness[i] == 1:
                 incomplete_data.append(data[i])
             else:
                 incomplete_data.append(0.0)
-        return incomplete_data
+        return Series(incomplete_data)
 
     def noise_all_series(self, power: float):
         return self.defect_all_series(
@@ -93,7 +77,7 @@ class StockMarketSeries:
             {column: Defection(self.add_incompleteness, incomplete_part) for column in SeriesColumn})
 
     def defect_all_series(self, defections: dict):
-        return {column: defection.method(self.series[column], defection.scale) for column, defection in
+        return {column: defection.method(self.real_series[column], defection.scale) for column, defection in
                 defections.items()}
 
     def add_incompleteness_to_some_series_set(self, partially_incomplete_parts):
@@ -116,26 +100,26 @@ class StockMarketSeries:
              incomplete_parts.items()})
 
     def defect_some_series(self, series_to_defect: dict):
-        return {column: self.series[column] if column not in series_to_defect.keys() else None
+        return {column: self.real_series[column] if column not in series_to_defect.keys() else None
                 for column in SeriesColumn} | \
-            {column: defection.method(self.series[column], defection.scale)
+            {column: defection.method(self.real_series[column], defection.scale)
              for column, defection in series_to_defect.items()}
 
-    def plot_single_series(self, data: list, column: SeriesColumn, plot_type="-"):
+    def plot_single_series(self, data: Series, column: SeriesColumn, plot_type="-"):
         plt.figure(figsize=(10, 4))
-        plt.plot(data, plot_type)
+        plt.plot(data.values, plot_type)
         plt.title(f"{self.company_name} {column.value} price")
-        plt.xlabel("Dates")
-        plt.ylabel("Prices")
+        plt.xlabel("Time [days]")
+        plt.ylabel("Prices [USD]")
 
     def plot_multiple_series(self, title: str, **kwargs):
         fig = plt.figure(facecolor="w", figsize=(10, 4))
         ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
         for label, series in (kwargs.items()):
-            ax.plot(series, markersize=1.5, label=label)
+            ax.plot(series.values, markersize=1.5, label=label)
         ax.set_title(f"{self.company_name} {title}")
         ax.set_xlabel("Time [days]")
-        ax.set_ylabel("Prices")
+        ax.set_ylabel("Prices [USD]")
         legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.2))
         legend.get_frame().set_alpha(0.5)
         for spine in ("top", "right", "bottom", "left"):

@@ -37,8 +37,8 @@ class HeinrichCorrectnessMetric:
         first_series, second_series, third_series = self.init_series()
         first_quality, second_quality, third_quality = [], [], []
 
-        for i in range(self.stock.time_series_start, self.stock.time_series_end):
-            value = self.stock.series[column][i]
+        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+            value = self.stock.real_series[column][i]
             first_quality.append(self.heinrich_values(first_series[column][i], value, alpha[column]))
             second_quality.append(self.heinrich_values(second_series[column][i], value, alpha[column]))
             third_quality.append(self.heinrich_values(third_series[column][i], value, alpha[column]))
@@ -51,8 +51,8 @@ class HeinrichCorrectnessMetric:
         first_series, second_series, third_series = self.init_series(noised_series=noised_series)
         first_quality, second_quality, third_quality = [], [], []
 
-        for i in range(self.stock.time_series_start, self.stock.time_series_end):
-            tuple = self.stock.create_tuple(self.stock.series, i)
+        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+            tuple = self.stock.create_tuple(self.stock.real_series, i)
             first_tuple = self.stock.create_tuple(first_series, i)
             second_tuple = self.stock.create_tuple(second_series, i)
             third_tuple = self.stock.create_tuple(third_series, i)
@@ -72,8 +72,8 @@ class HeinrichCorrectnessMetric:
         first_series, second_series, third_series = self.init_series(noised_series=noised_series)
         tuples, tuples_noised_first, tuples_noised_second, tuples_noised_third = [], [], [], []
 
-        for i in range(self.stock.time_series_start, self.stock.time_series_end):
-            tuples.append(self.stock.create_tuple(self.stock.series, i))
+        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+            tuples.append(self.stock.create_tuple(self.stock.real_series, i))
             tuples_noised_first.append(self.stock.create_tuple(first_series, i))
             tuples_noised_second.append(self.stock.create_tuple(second_series, i))
             tuples_noised_third.append(self.stock.create_tuple(third_series, i))

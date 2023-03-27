@@ -7,6 +7,9 @@ import torch
 from auto_esn.esn.esn import DeepESN
 from matplotlib import pyplot as plt
 
+from metrics.utils import DefectsSource
+from timeseries.utils import SeriesColumn
+
 
 class ReservoirResult:
     def __init__(self, X, y, X_test, y_test, res):
@@ -19,21 +22,23 @@ class ReservoirResult:
 
 class Reservoir:
 
-    def __init__(self, prices, prediction_start, prediction_end):
-        self.prices = prices
-        self.min_val = pd.Series(prices).min()
-        self.max_val = pd.Series(prices).max()
-        self.normalized_prices = self.normalize()
+    def __init__(self, prices, prediction_start, column: SeriesColumn, defect: DefectsSource):
         self.prediction_start = prediction_start
-        self.prediction_end = prediction_end
+        returns = prices.dropna()
+        self.data_to_learn = self.normalize(returns[:prediction_start])
+        self.data_to_learn_and_validate = self.normalize(returns)
+        self.column = column
+        self.defect = defect
 
-    def normalize(self):
-        df = pd.DataFrame((self.prices - self.min_val) / (self.max_val - self.min_val))
+    @staticmethod
+    def normalize(series):
+        df = pd.DataFrame((series - series.min()) / (series.max() - series.min()))
         df.columns = ["y"]
         return df
 
-    def denormalize(self, prices):
-        return prices * (self.max_val - self.min_val) + self.min_val
+    @staticmethod
+    def denormalize(series):
+        return series * (series.max() - series.min()) + series.min()
 
     def extrapolate_and_measure(self, params: dict):
         start_time = time.time_ns()
@@ -43,37 +48,39 @@ class Reservoir:
         return elapsed_time, rms
 
     def calculate_rms(self, result: ReservoirResult):
-        actual_data = self.prices[self.prediction_start:self.prediction_end].values
+        actual_data = self.data_to_learn_and_validate[self.prediction_start:].values
         prediction = (self.denormalize(result.res).numpy())
         return round(np.sqrt(np.mean((prediction - actual_data) ** 2)), 3)
 
     def extrapolate(self, params: dict) -> ReservoirResult:
-        mg17 = dl.loader_explicit(self.normalized_prices, test_size=self.prediction_end - self.prediction_start)
+        mg17 = dl.loader_explicit(self.data_to_learn_and_validate,
+                                  test_size=len(self.data_to_learn_and_validate) - self.prediction_start)
         X, X_test, y, y_test = mg17()
 
         esn = DeepESN(num_layers=2,
                       hidden_size=100)
-
         esn.fit(X, y)
 
-        point_to_predict = X_test[0:1]
         predictions = []
-        for j in range(self.prediction_end - self.prediction_start):
+        for j in range(len(self.data_to_learn_and_validate) - self.prediction_start):
+            point_to_predict = X_test[j: j + 1]
             predicted_value = esn(point_to_predict)
             predictions.append(predicted_value)
 
         res = torch.vstack(predictions)
         return ReservoirResult(X, y, X_test, y_test, res)
 
-    @staticmethod
-    def plot_extrapolation(result: ReservoirResult):
-        predicted = np.hstack(
-            [result.X.view(-1).detach().numpy()[:result.X.shape[0]], result.res.view(-1).detach().numpy()])
+    def plot_extrapolation(self, result: ReservoirResult):
         true = np.hstack(
             [result.y.view(-1).detach().numpy()[:result.X.shape[0]], result.y_test.view(-1).detach().numpy()])
+        predicted = np.hstack(
+            [result.res.view(-1).detach().numpy()])
 
-        plt.plot(range(result.X.shape[0] + result.X_test.shape[0]), predicted, 'r', label='predicted')
-        plt.plot(range(result.X.shape[0] + result.X_test.shape[0]), true, 'b', label='true')
-        plt.axvline(x=result.X.shape[0], color='g', label='extrapolation start')
+        plt.plot(range(result.X.shape[0] + result.X_test.shape[0]), true, 'r', label='Actual data')
+        plt.plot(range(result.X.shape[0], result.X.shape[0] + result.X_test.shape[0]), predicted, 'b', label='Prediction')
+        plt.axvline(x=result.X.shape[0], color='g', label='Extrapolation start')
+        plt.title(f"Reservoir prediction [{self.column.value} prices, {self.defect.value}]")
+        plt.xlabel("Time [days]")
+        plt.ylabel("Normalized prices [USD]")
         plt.legend()
         plt.show()
