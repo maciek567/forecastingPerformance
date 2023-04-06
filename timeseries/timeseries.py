@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 
-from metrics.utils import Incomplete
-from metrics.utils import Strength
+from metrics.utils import DefectsScale, DefectsSource
 from timeseries.utils import SeriesColumn
 
 
@@ -25,20 +24,22 @@ class StockMarketSeries:
         self.data = pd.read_csv(self.path)
         self.real_series = self.create_multiple_series()
         self.all_noises_strength = all_noises_strength if all_noises_strength is not None \
-            else {Strength.WEAK: 0.4, Strength.MODERATE: 1.0, Strength.STRONG: 3.0}
-        self.all_series_noised = \
-            {strength: self.noise_all_series(self.all_noises_strength[strength]) for strength in Strength}
+            else {DefectsScale.SLIGHTLY: 0.4, DefectsScale.MODERATELY: 1.0, DefectsScale.HIGHLY: 3.0}
         self.all_incomplete_parts = all_incomplete_parts if all_incomplete_parts is not None \
-            else {Incomplete.SLIGHTLY: 0.05, Incomplete.MODERATELY: 0.12, Incomplete.HIGHLY: 0.3}
-        self.all_series_incomplete = \
-            {incomplete: self.add_incompleteness_to_all_series(self.all_incomplete_parts[incomplete])
-             for incomplete in Incomplete}
+            else {DefectsScale.SLIGHTLY: 0.05, DefectsScale.MODERATELY: 0.12, DefectsScale.HIGHLY: 0.3}
+        self.all_defected_series = {
+            DefectsSource.NOISE:
+                {strength: self.noise_all_series(self.all_noises_strength[strength]) for strength in DefectsScale},
+            DefectsSource.INCOMPLETENESS:
+                {strength: self.nullify_all_series(self.all_incomplete_parts[strength]) for strength in DefectsScale}}
+        self.partially_defected_series = {}
         if partially_noised_strength is not None:
             self.partially_noised_strength = partially_noised_strength
-            self.partially_noised = self.noise_some_series_set(partially_noised_strength)
+            self.partially_defected_series[DefectsSource.NOISE] = self.noise_some_series_set(partially_noised_strength)
         if partially_incomplete_parts is not None:
             self.partially_incomplete_parts = partially_incomplete_parts
-            self.partially_incomplete = self.add_incompleteness_to_some_series_set(partially_incomplete_parts)
+            self.partially_defected_series[DefectsSource.INCOMPLETENESS] = \
+                self.add_incompleteness_to_some_series_set(partially_incomplete_parts)
 
     def create_single_series(self, column_name: SeriesColumn):
         series = pd.Series(list(self.data[column_name]), index=self.data["date"])
@@ -72,7 +73,7 @@ class StockMarketSeries:
         return self.defect_all_series(
             {column: Defection(self.add_noise, power) for column in SeriesColumn})
 
-    def add_incompleteness_to_all_series(self, incomplete_part: float):
+    def nullify_all_series(self, incomplete_part: float):
         return self.defect_all_series(
             {column: Defection(self.add_incompleteness, incomplete_part) for column in SeriesColumn})
 
@@ -83,12 +84,12 @@ class StockMarketSeries:
     def add_incompleteness_to_some_series_set(self, partially_incomplete_parts):
         return {incomplete: self.add_incompleteness_to_some_series(
             {column: incompleted[incomplete] for column, incompleted in partially_incomplete_parts.items()})
-            for incomplete in Incomplete}
+            for incomplete in DefectsScale}
 
     def noise_some_series_set(self, partially_noised_strength):
         return {strength: self.noise_some_series(
             {column: strengths[strength] for column, strengths in partially_noised_strength.items()})
-            for strength in Strength}
+            for strength in DefectsScale}
 
     def noise_some_series(self, noises: dict):
         return self.defect_some_series(
@@ -105,10 +106,10 @@ class StockMarketSeries:
             {column: defection.method(self.real_series[column], defection.scale)
              for column, defection in series_to_defect.items()}
 
-    def plot_single_series(self, data: Series, column: SeriesColumn, plot_type="-"):
+    def plot_single_series(self, data: Series, column: SeriesColumn, defection: str = "", plot_type="-"):
         plt.figure(figsize=(10, 4))
         plt.plot(data.values, plot_type)
-        plt.title(f"{self.company_name} {column.value} price")
+        plt.title(f"{self.company_name} {defection} {column.value} price")
         plt.xlabel("Time [days]")
         plt.ylabel("Prices [USD]")
 

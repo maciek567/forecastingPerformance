@@ -7,20 +7,13 @@ class MetricLevel(Enum):
     RELATION = "relation"
 
 
-class Strength(Enum):
-    WEAK = "weak"
-    MODERATE = "moderate"
-    STRONG = "strong"
+class DefectsSource(Enum):
+    NONE = "no defects"
+    NOISE = "noise"
+    INCOMPLETENESS = "incompleteness"
 
 
-class Incomplete(Enum):
-    SLIGHTLY = "slightly"
-    MODERATELY = "moderately"
-    HIGHLY = "highly"
-
-
-class DefectionScale(Enum):
-    NONE = "undamaged"
+class DefectsScale(Enum):
     SLIGHTLY = "slightly"
     MODERATELY = "moderately"
     HIGHLY = "highly"
@@ -29,9 +22,3 @@ class DefectionScale(Enum):
 class DefectionRange(Enum):
     ALL = "all"
     PARTIAL = "partially"
-
-
-class DefectsSource(Enum):
-    NONE = "no defects"
-    NOISE = "noise"
-    INCOMPLETENESS = "incompleteness"

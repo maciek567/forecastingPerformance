@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from metrics.utils import Strength, MetricLevel, DefectionRange
+from metrics.utils import DefectsScale, MetricLevel, DefectionRange, DefectsSource
 from timeseries.timeseries import StockMarketSeries
 from timeseries.utils import SeriesColumn
 
@@ -85,12 +85,12 @@ class HeinrichCorrectnessMetric:
         return self.custom_alpha if is_alpha else self.default_alpha
 
     def init_series(self, noised_series: DefectionRange = DefectionRange.ALL):
-        series = self.stock.all_series_noised
+        series = self.stock.all_defected_series[DefectsSource.NOISE]
         if noised_series == DefectionRange.PARTIAL:
-            series = self.stock.partially_noised
+            series = self.stock.partially_defected_series[DefectsSource.NOISE]
 
-        first_series, second_series, third_series = series[Strength.WEAK], \
-            series[Strength.MODERATE], series[Strength.STRONG]
+        first_series, second_series, third_series = series[DefectsScale.SLIGHTLY], \
+            series[DefectsScale.MODERATELY], series[DefectsScale.HIGHLY]
         return first_series, second_series, third_series
 
     def draw_heinrich_qualities(self, first: list, second: list, third: list,
@@ -98,9 +98,9 @@ class HeinrichCorrectnessMetric:
                                 noise_range: DefectionRange = DefectionRange.ALL, column_name: SeriesColumn = None):
         fig = plt.figure(facecolor="w")
         ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
-        ax.plot(first, "b", lw=1, label=f"Weak noise: std={self.noises_label(Strength.WEAK, noise_range)}")
-        ax.plot(second, "r", lw=1, label=f"Medium noise: std={self.noises_label(Strength.MODERATE, noise_range)}")
-        ax.plot(third, "g", lw=1, label=f"Strong noise: std={self.noises_label(Strength.STRONG, noise_range)}")
+        ax.plot(first, "b", lw=1, label=f"Weak noise: std={self.noises_label(DefectsScale.SLIGHTLY, noise_range)}")
+        ax.plot(second, "r", lw=1, label=f"Medium noise: std={self.noises_label(DefectsScale.MODERATELY, noise_range)}")
+        ax.plot(third, "g", lw=1, label=f"Strong noise: std={self.noises_label(DefectsScale.HIGHLY, noise_range)}")
         column = column_name.value if column_name is not None else "all columns"
         noise = noise_range.value if noise_range is not None else "all"
         sensitiveness = ", sensitiveness" if is_alpha else ""
@@ -113,7 +113,7 @@ class HeinrichCorrectnessMetric:
             ax.spines[spine].set_visible(False)
         plt.show()
 
-    def noises_label(self, strength: Strength, noise_range: DefectionRange):
+    def noises_label(self, strength: DefectsScale, noise_range: DefectionRange):
         if noise_range == DefectionRange.ALL:
             return self.stock.all_noises_strength[strength]
         else:
