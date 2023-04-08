@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 
-from metrics.utils import DefectsScale, MetricLevel, DefectionRange, DefectsSource
+from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn
+from timeseries.utils import SeriesColumn, DefectionRange, DefectsSource, DefectsScale
 
 
 class HeinrichCorrectnessMetric:
@@ -13,94 +13,80 @@ class HeinrichCorrectnessMetric:
         self.custom_alpha = alpha
 
     @staticmethod
-    def d(w_i: float, w_r: float, alpha: float):
+    def d(w_i: float, w_r: float, alpha: float) -> float:
         return pow(abs(w_i - w_r) / max(abs(w_i), abs(w_r)), alpha)
 
-    def heinrich_values(self, w_i: float, w_r: float, alpha: float):
+    def heinrich_values(self, w_i: float, w_r: float, alpha: float) -> float:
         return 1 - self.d(w_i, w_r, alpha)
 
-    def heinrich_tuples(self, t: list, e: list, g: list, alpha: list):
+    def heinrich_tuples(self, t: list, e: list, g: list, alpha: list) -> float:
         quality_sum = 0
         for i in range(len(t)):
             quality_sum += self.heinrich_values(t[i], e[i], alpha[i]) * g[i]
         return quality_sum / sum(g)
 
-    def heinrich_relation(self, r: list, e: list, tuple_weights: list, alpha: list):
+    def heinrich_relation(self, r: list, e: list, tuple_weights: list, alpha: list) -> float:
         quality_sum = 0
         for i in range(len(r)):
             quality_sum += self.heinrich_tuples(r[i], e[i], tuple_weights, alpha)
         return quality_sum / len(r)
 
-    def values_qualities(self, column: SeriesColumn,
-                         is_alpha: bool = True):
-        alpha = self.init_alpha(is_alpha)
-        first_series, second_series, third_series = self.init_series()
-        first_quality, second_quality, third_quality = [], [], []
+    def values_qualities(self, column: SeriesColumn, is_alpha: bool = True) -> dict:
+        alpha = self.get_alpha(is_alpha)
+        defected_series = self.stock.get_defected_series(DefectsSource.NOISE)
+        qualities = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             value = self.stock.real_series[column][i]
-            first_quality.append(self.heinrich_values(first_series[column][i], value, alpha[column]))
-            second_quality.append(self.heinrich_values(second_series[column][i], value, alpha[column]))
-            third_quality.append(self.heinrich_values(third_series[column][i], value, alpha[column]))
+            for scale in DefectsScale:
+                qualities[scale].append(self.heinrich_values(defected_series[scale][column][i], value, alpha[column]))
 
-        return first_quality, second_quality, third_quality
+        return qualities
 
-    def tuples_qualities(self, tuple_weights: list, noised_series: DefectionRange = DefectionRange.ALL,
+    def tuples_qualities(self, tuple_weights: list, noise_range: DefectionRange = DefectionRange.ALL,
                          is_alpha: bool = True):
-        alpha = self.init_alpha(is_alpha)
-        first_series, second_series, third_series = self.init_series(noised_series=noised_series)
-        first_quality, second_quality, third_quality = [], [], []
+        alpha = self.get_alpha(is_alpha)
+        defected_series = self.stock.get_defected_series(DefectsSource.NOISE, noise_range)
+        qualities = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            tuple = self.stock.create_tuple(self.stock.real_series, i)
-            first_tuple = self.stock.create_tuple(first_series, i)
-            second_tuple = self.stock.create_tuple(second_series, i)
-            third_tuple = self.stock.create_tuple(third_series, i)
+            real_tuple = self.stock.create_tuple(self.stock.real_series, i)
+            for scale in DefectsScale:
+                qualities[scale].append(self.heinrich_tuples(self.stock.create_tuple(defected_series[scale], i),
+                                                             real_tuple, tuple_weights, list(alpha.values())))
 
-            first_quality.append(
-                self.heinrich_tuples(first_tuple, tuple, tuple_weights, list(alpha.values())))
-            second_quality.append(
-                self.heinrich_tuples(second_tuple, tuple, tuple_weights, list(alpha.values())))
-            third_quality.append(
-                self.heinrich_tuples(third_tuple, tuple, tuple_weights, list(alpha.values())))
+        return qualities
 
-        return first_quality, second_quality, third_quality
-
-    def relation_qualities(self, tuple_weights: list, noised_series: DefectionRange = DefectionRange.ALL,
-                           is_alpha: bool = True):
-        alpha = self.init_alpha(is_alpha)
-        first_series, second_series, third_series = self.init_series(noised_series=noised_series)
-        tuples, tuples_noised_first, tuples_noised_second, tuples_noised_third = [], [], [], []
+    def relation_qualities(self, tuple_weights: list, noise_range: DefectionRange = DefectionRange.ALL,
+                           is_alpha: bool = True) -> dict:
+        alpha = self.get_alpha(is_alpha)
+        defected_series = self.stock.get_defected_series(DefectsSource.NOISE, noise_range)
+        real_tuples = []
+        defected_tuples = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            tuples.append(self.stock.create_tuple(self.stock.real_series, i))
-            tuples_noised_first.append(self.stock.create_tuple(first_series, i))
-            tuples_noised_second.append(self.stock.create_tuple(second_series, i))
-            tuples_noised_third.append(self.stock.create_tuple(third_series, i))
-        return self.heinrich_relation(tuples_noised_first, tuples, tuple_weights, list(alpha.values())), \
-            self.heinrich_relation(tuples_noised_second, tuples, tuple_weights, list(alpha.values())), \
-            self.heinrich_relation(tuples_noised_third, tuples, tuple_weights, list(alpha.values()))
+            real_tuples.append(self.stock.create_tuple(self.stock.real_series, i))
+            for scale in DefectsScale:
+                defected_tuples[scale].append(self.stock.create_tuple(defected_series[scale], i))
 
-    def init_alpha(self, is_alpha: bool):
+        return {scale: self.heinrich_relation(defected_tuples[scale], real_tuples, tuple_weights, list(alpha.values()))
+                for scale in DefectsScale}
+
+    def get_alpha(self, is_alpha: bool) -> dict:
         return self.custom_alpha if is_alpha else self.default_alpha
 
-    def init_series(self, noised_series: DefectionRange = DefectionRange.ALL):
-        series = self.stock.all_defected_series[DefectsSource.NOISE]
-        if noised_series == DefectionRange.PARTIAL:
-            series = self.stock.partially_defected_series[DefectsSource.NOISE]
-
-        first_series, second_series, third_series = series[DefectsScale.SLIGHTLY], \
-            series[DefectsScale.MODERATELY], series[DefectsScale.HIGHLY]
-        return first_series, second_series, third_series
-
-    def draw_heinrich_qualities(self, first: list, second: list, third: list,
+    def draw_heinrich_qualities(self, qualities: dict,
                                 level: MetricLevel, is_alpha: bool,
-                                noise_range: DefectionRange = DefectionRange.ALL, column_name: SeriesColumn = None):
+                                noise_range: DefectionRange = DefectionRange.ALL,
+                                column_name: SeriesColumn = None) -> None:
         fig = plt.figure(facecolor="w")
         ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
-        ax.plot(first, "b", lw=1, label=f"Weak noise: std={self.noises_label(DefectsScale.SLIGHTLY, noise_range)}")
-        ax.plot(second, "r", lw=1, label=f"Medium noise: std={self.noises_label(DefectsScale.MODERATELY, noise_range)}")
-        ax.plot(third, "g", lw=1, label=f"Strong noise: std={self.noises_label(DefectsScale.HIGHLY, noise_range)}")
+        ax.plot(qualities[DefectsScale.SLIGHTLY], "b", lw=1,
+                label=f"Weak noise: std={self.noises_label(DefectsScale.SLIGHTLY, noise_range)}")
+        ax.plot(qualities[DefectsScale.MODERATELY], "r", lw=1,
+                label=f"Medium noise: std={self.noises_label(DefectsScale.MODERATELY, noise_range)}")
+        ax.plot(qualities[DefectsScale.HIGHLY], "g", lw=1,
+                label=f"Strong noise: std={self.noises_label(DefectsScale.HIGHLY, noise_range)}")
         column = column_name.value if column_name is not None else "all columns"
         noise = noise_range.value if noise_range is not None else "all"
         sensitiveness = ", sensitiveness" if is_alpha else ""
@@ -113,9 +99,9 @@ class HeinrichCorrectnessMetric:
             ax.spines[spine].set_visible(False)
         plt.show()
 
-    def noises_label(self, strength: DefectsScale, noise_range: DefectionRange):
+    def noises_label(self, strength: DefectsScale, noise_range: DefectionRange) -> str:
         if noise_range == DefectionRange.ALL:
-            return self.stock.all_noises_strength[strength]
+            return str(self.stock.all_noises_strength[strength])
         else:
             return str({column.value: strengths[strength] for column, strengths in
                         self.stock.partially_noised_strength.items()})

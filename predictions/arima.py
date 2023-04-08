@@ -1,5 +1,3 @@
-import time
-
 import matplotlib.pyplot as plt
 import pandas as pd
 from pandas import Series
@@ -8,28 +6,15 @@ from pmdarima.arima import ndiffs
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
 
-from metrics.utils import DefectsSource
 from predictions import utils
+from predictions.prediction import Prediction
 from predictions.utils import PredictionMethod
-from timeseries.utils import SeriesColumn
+from timeseries.utils import SeriesColumn, DefectsSource
 
 
-class ArimaPrediction:
+class ArimaPrediction(Prediction):
     def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        self.prediction_start = prediction_start
-        returns = prices.dropna()
-        self.data_to_learn = returns[:prediction_start]
-        self.data_to_learn_and_validate = returns
-        self.data_size = len(self.data_to_learn_and_validate)
-        self.column = column
-        self.defect = defect
-
-    def execute_and_measure(self, extrapolation_method, params: dict):
-        start_time = time.time_ns()
-        extrapolation = extrapolation_method(params)
-        elapsed_time = round((time.time_ns() - start_time) / 1e6)
-        rms = utils.calculate_rms(self, extrapolation)
-        return elapsed_time, rms
+        super().__init__(prices, prediction_start, column, defect)
 
     @staticmethod
     def print_elapsed_time(elapsed_time: float):

@@ -8,3 +8,20 @@ class SeriesColumn(Enum):
     HIGH = "high"
     LOW = "low"
     VOLUME = "volume"
+
+
+class DefectsSource(Enum):
+    NONE = "no defects"
+    NOISE = "noise"
+    INCOMPLETENESS = "incompleteness"
+
+
+class DefectsScale(Enum):
+    SLIGHTLY = "slightly"
+    MODERATELY = "moderately"
+    HIGHLY = "highly"
+
+
+class DefectionRange(Enum):
+    ALL = "all"
+    PARTIAL = "partially"

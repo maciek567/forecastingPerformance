@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 
-from metrics.utils import DefectsScale, DefectsSource
-from timeseries.utils import SeriesColumn
+from timeseries.utils import SeriesColumn, DefectsScale, DefectsSource, DefectionRange
 
 
 class Defection:
@@ -41,24 +40,24 @@ class StockMarketSeries:
             self.partially_defected_series[DefectsSource.INCOMPLETENESS] = \
                 self.add_incompleteness_to_some_series_set(partially_incomplete_parts)
 
-    def create_single_series(self, column_name: SeriesColumn):
+    def create_single_series(self, column_name: SeriesColumn) -> Series:
         series = pd.Series(list(self.data[column_name]), index=self.data["date"])
         return series[self.time_series_start:self.time_series_end]
 
-    def create_multiple_series(self):
+    def create_multiple_series(self) -> dict:
         return {column: self.create_single_series(column.value) for column in SeriesColumn}
 
     @staticmethod
-    def create_tuple(series: dict, i: int):
+    def create_tuple(series: dict, i: int) -> list:
         return [series[column][i] for column in SeriesColumn]
 
-    def add_noise(self, data: Series, power: float):
+    def add_noise(self, data: Series, power: float) -> Series:
         mean = 0
         std_dev = power
         noise = np.random.normal(mean, std_dev, self.time_series_end - self.time_series_start)
         return data + noise
 
-    def add_incompleteness(self, data: Series, incomplete_part: float):
+    def add_incompleteness(self, data: Series, incomplete_part: float) -> Series:
         incompleteness = np.random.choice([0, 1], self.time_series_end - self.time_series_start,
                                           p=[incomplete_part, 1.0 - incomplete_part])
         incomplete_data = []
@@ -69,51 +68,55 @@ class StockMarketSeries:
                 incomplete_data.append(0.0)
         return Series(incomplete_data)
 
-    def noise_all_series(self, power: float):
+    def noise_all_series(self, power: float) -> dict:
         return self.defect_all_series(
             {column: Defection(self.add_noise, power) for column in SeriesColumn})
 
-    def nullify_all_series(self, incomplete_part: float):
+    def nullify_all_series(self, incomplete_part: float) -> dict:
         return self.defect_all_series(
             {column: Defection(self.add_incompleteness, incomplete_part) for column in SeriesColumn})
 
-    def defect_all_series(self, defections: dict):
+    def defect_all_series(self, defections: dict) -> dict:
         return {column: defection.method(self.real_series[column], defection.scale) for column, defection in
                 defections.items()}
 
-    def add_incompleteness_to_some_series_set(self, partially_incomplete_parts):
+    def add_incompleteness_to_some_series_set(self, partially_incomplete_parts) -> dict:
         return {incomplete: self.add_incompleteness_to_some_series(
             {column: incompleted[incomplete] for column, incompleted in partially_incomplete_parts.items()})
             for incomplete in DefectsScale}
 
-    def noise_some_series_set(self, partially_noised_strength):
+    def noise_some_series_set(self, partially_noised_strength) -> dict:
         return {strength: self.noise_some_series(
             {column: strengths[strength] for column, strengths in partially_noised_strength.items()})
             for strength in DefectsScale}
 
-    def noise_some_series(self, noises: dict):
+    def noise_some_series(self, noises: dict) -> dict:
         return self.defect_some_series(
             {column: Defection(self.add_noise, power) for column, power in noises.items()})
 
-    def add_incompleteness_to_some_series(self, incomplete_parts: dict):
+    def add_incompleteness_to_some_series(self, incomplete_parts: dict) -> dict:
         return self.defect_some_series(
             {column: Defection(self.add_incompleteness, incomplete_part) for column, incomplete_part in
              incomplete_parts.items()})
 
-    def defect_some_series(self, series_to_defect: dict):
+    def defect_some_series(self, series_to_defect: dict) -> dict:
         return {column: self.real_series[column] if column not in series_to_defect.keys() else None
                 for column in SeriesColumn} | \
             {column: defection.method(self.real_series[column], defection.scale)
              for column, defection in series_to_defect.items()}
 
-    def plot_single_series(self, data: Series, column: SeriesColumn, defection: str = "", plot_type="-"):
+    def get_defected_series(self, source: DefectsSource, defection_range: DefectionRange = DefectionRange.ALL) -> dict:
+        return self.all_defected_series[source] if defection_range == DefectionRange.ALL \
+            else self.partially_defected_series[source]
+
+    def plot_single_series(self, data: Series, column: SeriesColumn, defection: str = "", plot_type="-") -> None:
         plt.figure(figsize=(10, 4))
         plt.plot(data.values, plot_type)
         plt.title(f"{self.company_name} {defection} {column.value} price")
         plt.xlabel("Time [days]")
         plt.ylabel("Prices [USD]")
 
-    def plot_multiple_series(self, title: str, **kwargs):
+    def plot_multiple_series(self, title: str, **kwargs) -> None:
         fig = plt.figure(facecolor="w", figsize=(10, 4))
         ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
         for label, series in (kwargs.items()):

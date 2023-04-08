@@ -1,5 +1,3 @@
-import time
-
 import auto_esn.utils.dataset_loader as dl
 import numpy as np
 import pandas as pd
@@ -13,30 +11,13 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
-from metrics.utils import DefectsSource
 from predictions import utils
-from timeseries.utils import SeriesColumn
+from predictions.prediction import Prediction
+from timeseries.utils import SeriesColumn, DefectsSource
 from utils import PredictionMethod
 
 
-class MlPrediction:
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        self.data_to_learn = prices.dropna()[:prediction_start]
-        self.data_to_learn_and_validate = prices.dropna()
-        self.data_size = len(self.data_to_learn_and_validate)
-        self.prediction_start = prediction_start
-        self.column = column
-        self.defect = defect
-
-    def execute_and_measure(self, extrapolation_method, params: dict):
-        start_time = time.time_ns()
-        extrapolation = extrapolation_method(params)
-        elapsed_time = round((time.time_ns() - start_time) / 1e6)
-        rms = utils.calculate_rms(self, extrapolation)
-        return elapsed_time, rms
-
-
-class Reservoir(MlPrediction):
+class Reservoir(Prediction):
     def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
         super().__init__(prices, prediction_start, column, defect)
 
@@ -65,7 +46,7 @@ class Reservoir(MlPrediction):
         utils.plot_extrapolation(self, result, PredictionMethod.Reservoir)
 
 
-class XGBoost(MlPrediction):
+class XGBoost(Prediction):
     def __init__(self, prices, prediction_start, column: SeriesColumn, defect: DefectsSource):
         super().__init__(prices, prediction_start, column, defect)
 

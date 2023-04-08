@@ -2,9 +2,9 @@ import math
 
 import matplotlib.pyplot as plt
 
-from metrics.utils import MetricLevel, DefectionRange, DefectsScale, DefectsSource
+from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn
+from timeseries.utils import SeriesColumn, DefectionRange, DefectsScale, DefectsSource
 
 
 class BlakeCompletenessMetric:
@@ -13,68 +13,59 @@ class BlakeCompletenessMetric:
         self.stock = stock
 
     @staticmethod
-    def blake_values(value: float):
+    def blake_values(value: float) -> float:
         return 1.0 if value != 0.0 else 0.0
 
     @staticmethod
-    def blake_tuples(values: list):
+    def blake_tuples(values: list) -> bool:
         return not (any(math.isclose(i, 0.0) for i in values))
 
-    def blake_relation(self, relation: list):
+    def blake_relation(self, relation: list) -> float:
         number_of_zero_tuples = 0
         for i in relation:
             if not self.blake_tuples(i):
                 number_of_zero_tuples += 1
         return 1 - number_of_zero_tuples / len(relation)
 
-    def values_qualities(self, column: SeriesColumn):
-        series = self.init_series()
-        qualities_first, qualities_second, qualities_third = [], [], []
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            qualities_first.append(self.blake_values(series[DefectsScale.SLIGHTLY][column][i]))
-            qualities_second.append(self.blake_values(series[DefectsScale.MODERATELY][column][i]))
-            qualities_third.append(self.blake_values(series[DefectsScale.HIGHLY][column][i]))
-        return qualities_first, qualities_second, qualities_third
-
-    def tuples_qualities(self, incompleteness_range: DefectionRange = DefectionRange.ALL):
-        series = self.init_series(incompleteness_range)
-        qualities_first, qualities_second, qualities_third = [], [], []
+    def values_qualities(self, column: SeriesColumn) -> dict:
+        defected_series = self.stock.get_defected_series(DefectsSource.INCOMPLETENESS)
+        qualities = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            tuple_slightly_incomplete = self.stock.create_tuple(series[DefectsScale.SLIGHTLY], i)
-            tuple_moderately_incomplete = self.stock.create_tuple(series[DefectsScale.MODERATELY], i)
-            tuple_highly_incomplete = self.stock.create_tuple(series[DefectsScale.HIGHLY], i)
-            qualities_first.append(self.blake_tuples(tuple_slightly_incomplete))
-            qualities_second.append(self.blake_tuples(tuple_moderately_incomplete))
-            qualities_third.append(self.blake_tuples(tuple_highly_incomplete))
+            for scale in DefectsScale:
+                qualities[scale].append(self.blake_values(defected_series[scale][column][i]))
 
-        return qualities_first, qualities_second, qualities_third
+        return qualities
 
-    def relation_qualities(self, incompleteness_range: DefectionRange = DefectionRange.ALL):
-        series = self.init_series(incompleteness_range)
-        tuples_slightly_incomplete, tuples_moderately_incomplete, tuples_highly_incomplete = [], [], []
+    def tuples_qualities(self, incompleteness_range: DefectionRange = DefectionRange.ALL) -> dict:
+        defected_series = self.stock.get_defected_series(DefectsSource.INCOMPLETENESS, incompleteness_range)
+        qualities = {scale: [] for scale in DefectsScale}
+
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            tuples_slightly_incomplete.append(self.stock.create_tuple(series[DefectsScale.SLIGHTLY], i))
-            tuples_moderately_incomplete.append(self.stock.create_tuple(series[DefectsScale.MODERATELY], i))
-            tuples_highly_incomplete.append(self.stock.create_tuple(series[DefectsScale.HIGHLY], i))
-        return self.blake_relation(tuples_slightly_incomplete), self.blake_relation(
-            tuples_moderately_incomplete), self.blake_relation(tuples_highly_incomplete)
+            for scale in DefectsScale:
+                qualities[scale].append(self.blake_tuples(self.stock.create_tuple(defected_series[scale], i)))
 
-    def init_series(self, incompleteness_range: DefectionRange = None):
-        return self.stock.partially_defected_series[DefectsSource.INCOMPLETENESS] \
-            if incompleteness_range == DefectionRange.PARTIAL \
-            else self.stock.all_defected_series[DefectsSource.INCOMPLETENESS]
+        return qualities
 
-    def draw_blake(self, slightly: list, moderately: list, highly: list, level: MetricLevel,
+    def relation_qualities(self, incompleteness_range: DefectionRange = DefectionRange.ALL) -> dict:
+        defected_series = self.stock.get_defected_series(DefectsSource.INCOMPLETENESS, incompleteness_range)
+        defected_tuples = {scale: [] for scale in DefectsScale}
+        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+            for scale in DefectsScale:
+                defected_tuples[scale].append(self.stock.create_tuple(defected_series[scale], i))
+
+        return {scale: self.blake_relation(defected_tuples[scale]) for scale in DefectsScale}
+
+    def draw_blake(self, qualities: dict, level: MetricLevel,
                    incompleteness_range: DefectionRange = DefectionRange.ALL,
-                   column_name: SeriesColumn = None):
+                   column_name: SeriesColumn = None) -> None:
         fig, ax = plt.subplots(3, 1)
         range_title = ", " + incompleteness_range.value + " affected" if level == MetricLevel.TUPLES else ""
         column = column_name.value if column_name is not None else "all columns"
         fig.suptitle(f"Blake's metric {column} prices [{level.value}{range_title}]", size=14)
-        ax[0].plot(slightly, "o", color="b", markersize=2)
-        ax[1].plot(moderately, "o", color="g", markersize=2)
-        ax[2].plot(highly, "o", color="r", markersize=2)
+        ax[0].plot(qualities[DefectsScale.SLIGHTLY], "o", color="b", markersize=2)
+        ax[1].plot(qualities[DefectsScale.MODERATELY], "o", color="g", markersize=2)
+        ax[2].plot(qualities[DefectsScale.HIGHLY], "o", color="r", markersize=2)
         ax[0].set_title(f"Slightly incomplete (probability:"
                         f" {self.incompleteness_label(DefectsScale.SLIGHTLY, incompleteness_range)})", size=10)
         ax[1].set_title(f"Moderately incomplete probability:"

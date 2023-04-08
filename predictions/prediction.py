@@ -1,10 +1,10 @@
+import time
 from statistics import mean, stdev
 
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
-from metrics.utils import DefectsScale, DefectionRange, DefectsSource
 from predictions import utils
-from timeseries.timeseries import StockMarketSeries
+from timeseries.timeseries import StockMarketSeries, DefectsScale, DefectionRange, DefectsSource
 from timeseries.utils import SeriesColumn
 
 defects_source_label = "Defects source"
@@ -34,7 +34,7 @@ class PredictionModel:
         self.model_real = None
         self.model_defected = None
 
-    def create_model(self, method, **kwargs):
+    def configure_model(self, method, **kwargs):
         self.method = method
         self.additional_params = kwargs
         self.model_real = self.create_model_real()
@@ -101,3 +101,20 @@ class PredictionModel:
                 std_dev_time_label: stdev(elapsed_times),
                 avg_rms_label: mean(rms_metrics),
                 std_dev_rms_label: stdev(rms_metrics)}
+
+
+class Prediction:
+    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
+        self.data_to_learn = prices.dropna()[:prediction_start]
+        self.data_to_learn_and_validate = prices.dropna()
+        self.data_size = len(self.data_to_learn_and_validate)
+        self.prediction_start = prediction_start
+        self.column = column
+        self.defect = defect
+
+    def execute_and_measure(self, extrapolation_method, params: dict):
+        start_time = time.time_ns()
+        extrapolation = extrapolation_method(params)
+        elapsed_time = round((time.time_ns() - start_time) / 1e6)
+        rms = utils.calculate_rms(self, extrapolation)
+        return elapsed_time, rms
