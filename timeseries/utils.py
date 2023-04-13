@@ -14,6 +14,7 @@ class DefectsSource(Enum):
     NONE = "no defects"
     NOISE = "noise"
     INCOMPLETENESS = "incompleteness"
+    TIMELINESS = "obsolescence"
 
 
 class DefectsScale(Enum):

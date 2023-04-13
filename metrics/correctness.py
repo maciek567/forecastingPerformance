@@ -50,9 +50,9 @@ class HeinrichCorrectnessMetric:
         qualities = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            real_tuple = self.stock.create_tuple(self.stock.real_series, i)
+            real_tuple = self.stock.attributes_list(self.stock.real_series, i)
             for scale in DefectsScale:
-                qualities[scale].append(self.heinrich_tuples(self.stock.create_tuple(defected_series[scale], i),
+                qualities[scale].append(self.heinrich_tuples(self.stock.attributes_list(defected_series[scale], i),
                                                              real_tuple, tuple_weights, list(alpha.values())))
 
         return qualities
@@ -65,9 +65,9 @@ class HeinrichCorrectnessMetric:
         defected_tuples = {scale: [] for scale in DefectsScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            real_tuples.append(self.stock.create_tuple(self.stock.real_series, i))
+            real_tuples.append(self.stock.attributes_list(self.stock.real_series, i))
             for scale in DefectsScale:
-                defected_tuples[scale].append(self.stock.create_tuple(defected_series[scale], i))
+                defected_tuples[scale].append(self.stock.attributes_list(defected_series[scale], i))
 
         return {scale: self.heinrich_relation(defected_tuples[scale], real_tuples, tuple_weights, list(alpha.values()))
                 for scale in DefectsScale}

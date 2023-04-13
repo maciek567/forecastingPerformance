@@ -1,9 +1,13 @@
+from datetime import date, datetime, timedelta
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas import Series
 
 from timeseries.utils import SeriesColumn, DefectsScale, DefectsSource, DefectionRange
+
+DAYS_IN_YEAR = 365
 
 
 class Defection:
@@ -48,8 +52,19 @@ class StockMarketSeries:
         return {column: self.create_single_series(column.value) for column in SeriesColumn}
 
     @staticmethod
-    def create_tuple(series: dict, i: int) -> list:
+    def attributes_list(series: dict, i: int) -> list:
         return [series[column][i] for column in SeriesColumn]
+
+    @staticmethod
+    def to_date(date_string: str) -> date:
+        return datetime.strptime(date_string, '%Y-%m-%d').date()
+
+    def get_ages(self, measurement_time: int = None) -> tuple:
+        dates = self.real_series[SeriesColumn.OPEN].index.tolist()
+        today = date.today() if measurement_time is None else self.to_date(dates[-1]) + timedelta(days=measurement_time)
+        time_diffs = [str(measurement_time + len(dates) - i) for i in range(len(dates))]
+        ages = [(today - self.to_date(dates[i])).days / DAYS_IN_YEAR for i in range(len(dates))]
+        return time_diffs, ages
 
     def add_noise(self, data: Series, power: float) -> Series:
         mean = 0

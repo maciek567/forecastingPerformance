@@ -11,6 +11,6 @@ class MetricLevel(Enum):
 
 def print_relation_results(qualities: dict, source: DefectsSource, defection_range: DefectionRange) -> None:
     defected_columns = "all" if defection_range == DefectionRange.ALL else "some"
-    print(f"Relation quality differences due to different {source.value} levels of {defected_columns} fields")
+    print(f"Relation quality differences due to different {source.value} levels of {defected_columns} fields:")
     for scale in DefectsScale:
-        print(f"Quality {scale.value} noised): {qualities[scale]}")
+        print(f"Data {scale.value} defected: {qualities[scale]}")

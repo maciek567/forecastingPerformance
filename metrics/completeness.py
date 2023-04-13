@@ -43,7 +43,7 @@ class BlakeCompletenessMetric:
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             for scale in DefectsScale:
-                qualities[scale].append(self.blake_tuples(self.stock.create_tuple(defected_series[scale], i)))
+                qualities[scale].append(self.blake_tuples(self.stock.attributes_list(defected_series[scale], i)))
 
         return qualities
 
@@ -52,7 +52,7 @@ class BlakeCompletenessMetric:
         defected_tuples = {scale: [] for scale in DefectsScale}
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             for scale in DefectsScale:
-                defected_tuples[scale].append(self.stock.create_tuple(defected_series[scale], i))
+                defected_tuples[scale].append(self.stock.attributes_list(defected_series[scale], i))
 
         return {scale: self.blake_relation(defected_tuples[scale]) for scale in DefectsScale}
 
