@@ -10,19 +10,19 @@ class SeriesColumn(Enum):
     VOLUME = "volume"
 
 
-class DefectsSource(Enum):
-    NONE = "no defects"
+class DeviationSource(Enum):
+    NONE = "no deviations"
     NOISE = "noise"
     INCOMPLETENESS = "incompleteness"
     TIMELINESS = "obsolescence"
 
 
-class DefectsScale(Enum):
+class DeviationScale(Enum):
     SLIGHTLY = "slightly"
     MODERATELY = "moderately"
     HIGHLY = "highly"
 
 
-class DefectionRange(Enum):
+class DeviationRange(Enum):
     ALL = "all"
     PARTIAL = "partially"

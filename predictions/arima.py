@@ -9,12 +9,12 @@ from statsmodels.tsa.arima.model import ARIMA
 from predictions import utils
 from predictions.prediction import Prediction
 from predictions.utils import PredictionMethod
-from timeseries.utils import SeriesColumn, DefectsSource
+from timeseries.utils import SeriesColumn, DeviationSource
 
 
 class ArimaPrediction(Prediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        super().__init__(prices, prediction_start, column, defect)
+    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, prediction_start, column, deviation)
 
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
@@ -38,8 +38,8 @@ class ArimaPrediction(Prediction):
 
 
 class ManualArima(ArimaPrediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        super().__init__(prices, prediction_start, column, defect)
+    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, prediction_start, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -62,8 +62,8 @@ class ManualArima(ArimaPrediction):
 
 
 class AutoArima(ArimaPrediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        super().__init__(prices, prediction_start, column, defect)
+    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, prediction_start, column, deviation)
         self.auto_arima_model = None
 
     def extrapolate_and_measure(self, params: dict):

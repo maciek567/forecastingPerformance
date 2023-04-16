@@ -33,7 +33,7 @@ def plot_extrapolation(model, result: ndarray, method: PredictionMethod) -> None
     plt.plot(range(model.prediction_start, model.data_size), result, "b",
              label="Prediction")
     plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
-    plt.title(f"{method.value} extrapolation [{model.column.value} prices, {model.defect.value}]")
+    plt.title(f"{method.value} extrapolation [{model.column.value} prices, {model.deviation.value}]")
     plt.xlabel("Time [days]")
     plt.ylabel("Prices [USD]")
     plt.legend()

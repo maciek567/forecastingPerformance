@@ -13,13 +13,13 @@ from xgboost import XGBRegressor
 
 from predictions import utils
 from predictions.prediction import Prediction
-from timeseries.utils import SeriesColumn, DefectsSource
+from timeseries.utils import SeriesColumn, DeviationSource
 from utils import PredictionMethod
 
 
 class Reservoir(Prediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, defect: DefectsSource):
-        super().__init__(prices, prediction_start, column, defect)
+    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, prediction_start, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -47,8 +47,8 @@ class Reservoir(Prediction):
 
 
 class XGBoost(Prediction):
-    def __init__(self, prices, prediction_start, column: SeriesColumn, defect: DefectsSource):
-        super().__init__(prices, prediction_start, column, defect)
+    def __init__(self, prices, prediction_start, column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, prediction_start, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)

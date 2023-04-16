@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DefectionRange, DefectsSource, DefectsScale
+from timeseries.utils import SeriesColumn, DeviationRange, DeviationSource, DeviationScale
 
 
 class HeinrichCorrectnessMetric:
@@ -33,60 +33,60 @@ class HeinrichCorrectnessMetric:
 
     def values_qualities(self, column: SeriesColumn, is_alpha: bool = True) -> dict:
         alpha = self.get_alpha(is_alpha)
-        defected_series = self.stock.get_defected_series(DefectsSource.NOISE)
-        qualities = {scale: [] for scale in DefectsScale}
+        deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE)
+        qualities = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             value = self.stock.real_series[column][i]
-            for scale in DefectsScale:
-                qualities[scale].append(self.heinrich_values(defected_series[scale][column][i], value, alpha[column]))
+            for scale in DeviationScale:
+                qualities[scale].append(self.heinrich_values(deviated_series[scale][column][i], value, alpha[column]))
 
         return qualities
 
-    def tuples_qualities(self, tuple_weights: list, noise_range: DefectionRange = DefectionRange.ALL,
+    def tuples_qualities(self, tuple_weights: list, noise_range: DeviationRange = DeviationRange.ALL,
                          is_alpha: bool = True):
         alpha = self.get_alpha(is_alpha)
-        defected_series = self.stock.get_defected_series(DefectsSource.NOISE, noise_range)
-        qualities = {scale: [] for scale in DefectsScale}
+        deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
+        qualities = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             real_tuple = self.stock.attributes_list(self.stock.real_series, i)
-            for scale in DefectsScale:
-                qualities[scale].append(self.heinrich_tuples(self.stock.attributes_list(defected_series[scale], i),
+            for scale in DeviationScale:
+                qualities[scale].append(self.heinrich_tuples(self.stock.attributes_list(deviated_series[scale], i),
                                                              real_tuple, tuple_weights, list(alpha.values())))
 
         return qualities
 
-    def relation_qualities(self, tuple_weights: list, noise_range: DefectionRange = DefectionRange.ALL,
+    def relation_qualities(self, tuple_weights: list, noise_range: DeviationRange = DeviationRange.ALL,
                            is_alpha: bool = True) -> dict:
         alpha = self.get_alpha(is_alpha)
-        defected_series = self.stock.get_defected_series(DefectsSource.NOISE, noise_range)
+        deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         real_tuples = []
-        defected_tuples = {scale: [] for scale in DefectsScale}
+        deviated_tuples = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
             real_tuples.append(self.stock.attributes_list(self.stock.real_series, i))
-            for scale in DefectsScale:
-                defected_tuples[scale].append(self.stock.attributes_list(defected_series[scale], i))
+            for scale in DeviationScale:
+                deviated_tuples[scale].append(self.stock.attributes_list(deviated_series[scale], i))
 
-        return {scale: self.heinrich_relation(defected_tuples[scale], real_tuples, tuple_weights, list(alpha.values()))
-                for scale in DefectsScale}
+        return {scale: self.heinrich_relation(deviated_tuples[scale], real_tuples, tuple_weights, list(alpha.values()))
+                for scale in DeviationScale}
 
     def get_alpha(self, is_alpha: bool) -> dict:
         return self.custom_alpha if is_alpha else self.default_alpha
 
     def draw_heinrich_qualities(self, qualities: dict,
                                 level: MetricLevel, is_alpha: bool,
-                                noise_range: DefectionRange = DefectionRange.ALL,
+                                noise_range: DeviationRange = DeviationRange.ALL,
                                 column_name: SeriesColumn = None) -> None:
         fig = plt.figure(facecolor="w")
         ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
-        ax.plot(qualities[DefectsScale.SLIGHTLY], "b", lw=1,
-                label=f"Weak noise: std={self.noises_label(DefectsScale.SLIGHTLY, noise_range)}")
-        ax.plot(qualities[DefectsScale.MODERATELY], "r", lw=1,
-                label=f"Medium noise: std={self.noises_label(DefectsScale.MODERATELY, noise_range)}")
-        ax.plot(qualities[DefectsScale.HIGHLY], "g", lw=1,
-                label=f"Strong noise: std={self.noises_label(DefectsScale.HIGHLY, noise_range)}")
+        ax.plot(qualities[DeviationScale.SLIGHTLY], "b", lw=1,
+                label=f"Weak noise: std={self.noises_label(DeviationScale.SLIGHTLY, noise_range)}")
+        ax.plot(qualities[DeviationScale.MODERATELY], "r", lw=1,
+                label=f"Medium noise: std={self.noises_label(DeviationScale.MODERATELY, noise_range)}")
+        ax.plot(qualities[DeviationScale.HIGHLY], "g", lw=1,
+                label=f"Strong noise: std={self.noises_label(DeviationScale.HIGHLY, noise_range)}")
         column = column_name.value if column_name is not None else "all columns"
         noise = noise_range.value if noise_range is not None else "all"
         sensitiveness = ", sensitiveness" if is_alpha else ""
@@ -99,8 +99,8 @@ class HeinrichCorrectnessMetric:
             ax.spines[spine].set_visible(False)
         plt.show()
 
-    def noises_label(self, strength: DefectsScale, noise_range: DefectionRange) -> str:
-        if noise_range == DefectionRange.ALL:
+    def noises_label(self, strength: DeviationScale, noise_range: DeviationRange) -> str:
+        if noise_range == DeviationRange.ALL:
             return str(self.stock.all_noises_strength[strength])
         else:
             return str({column.value: strengths[strength] for column, strengths in
