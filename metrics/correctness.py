@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DeviationRange, DeviationSource, DeviationScale
+from timeseries.utils import SeriesColumn, DeviationRange, DeviationSource, DeviationScale, save_image, \
+    set_legend
 
 
 class HeinrichCorrectnessMetric:
@@ -79,8 +80,8 @@ class HeinrichCorrectnessMetric:
                                 level: MetricLevel, is_alpha: bool,
                                 noise_range: DeviationRange = DeviationRange.ALL,
                                 column_name: SeriesColumn = None) -> None:
-        fig = plt.figure(facecolor="w")
-        ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
+        fig = plt.figure(figsize=(10, 4))
+        ax = fig.add_subplot(111, axisbelow=True)
         ax.plot(qualities[DeviationScale.SLIGHTLY], "b", lw=1,
                 label=f"Weak noise: std={self.noises_label(DeviationScale.SLIGHTLY, noise_range)}")
         ax.plot(qualities[DeviationScale.MODERATELY], "r", lw=1,
@@ -90,18 +91,17 @@ class HeinrichCorrectnessMetric:
         column = column_name.value if column_name is not None else "all columns"
         noise = noise_range.value if noise_range is not None else "all"
         sensitiveness = ", sensitiveness" if is_alpha else ""
-        ax.set_title(f"Heinrich metric {column} prices [{level.value}, {noise} noised{sensitiveness}]")
+        title = f"Heinrich metric {column} prices [{level.value}, {noise} noised{sensitiveness}]"
+        ax.set_title(title)
         ax.set_xlabel("Time [days]")
         ax.set_ylabel("Quality")
-        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.2))
-        legend.get_frame().set_alpha(0.5)
-        for spine in ("top", "right", "bottom", "left"):
-            ax.spines[spine].set_visible(False)
+        set_legend(ax)
+        save_image(plt, title)
         plt.show()
 
     def noises_label(self, strength: DeviationScale, noise_range: DeviationRange) -> str:
         if noise_range == DeviationRange.ALL:
             return str(self.stock.all_noises_strength[strength])
         else:
-            return str({column.value: strengths[strength] for column, strengths in
-                        self.stock.partially_noised_strength.items()})
+            return "\n" + str({column.value: strengths[strength] for column, strengths in
+                               self.stock.partially_noised_strength.items()}).replace("\'", "")

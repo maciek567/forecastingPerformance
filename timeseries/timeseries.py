@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 
-from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, DeviationRange
+from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, DeviationRange, save_image, \
+    set_legend
 
 DAYS_IN_YEAR = 365
 
@@ -129,20 +130,21 @@ class StockMarketSeries:
     def plot_single_series(self, data: Series, column: SeriesColumn, deviation: str = "", plot_type="-") -> None:
         plt.figure(figsize=(10, 4))
         plt.plot(data.values, plot_type)
-        plt.title(f"{self.company_name} {deviation} {column.value} price")
+        title = f"{self.company_name} {deviation} {column.value} prices"
+        plt.title(title)
         plt.xlabel("Time [days]")
         plt.ylabel("Prices [USD]")
+        save_image(plt, title)
 
     def plot_multiple_series(self, title: str, **kwargs) -> None:
-        fig = plt.figure(facecolor="w", figsize=(10, 4))
-        ax = fig.add_subplot(111, facecolor="#dddddd", axisbelow=True)
+        fig = plt.figure(figsize=(10, 4))
+        ax = fig.add_subplot(111, axisbelow=True)
         for label, series in (kwargs.items()):
             ax.plot(series.values, markersize=1.5, label=label)
-        ax.set_title(f"{self.company_name} {title}")
+        title = f"{self.company_name} {title}"
+        ax.set_title(title)
         ax.set_xlabel("Time [days]")
         ax.set_ylabel("Prices [USD]")
-        legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.2))
-        legend.get_frame().set_alpha(0.5)
-        for spine in ("top", "right", "bottom", "left"):
-            ax.spines[spine].set_visible(False)
+        set_legend(ax)
+        save_image(plt, title)
         plt.show()

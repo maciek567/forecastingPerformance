@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DeviationRange, DeviationScale, DeviationSource
+from timeseries.utils import SeriesColumn, DeviationRange, DeviationScale, DeviationSource, save_image, set_ticks_size
 
 
 class BlakeCompletenessMetric:
@@ -59,10 +59,12 @@ class BlakeCompletenessMetric:
     def draw_blake(self, qualities: dict, level: MetricLevel,
                    incompleteness_range: DeviationRange = DeviationRange.ALL,
                    column_name: SeriesColumn = None) -> None:
-        fig, ax = plt.subplots(3, 1)
+        fig, ax = plt.subplots(3, 1, figsize=(8, 4))
+
         range_title = ", " + incompleteness_range.value + " affected" if level == MetricLevel.TUPLES else ""
         column = column_name.value if column_name is not None else "all columns"
-        fig.suptitle(f"Blake's metric {column} prices [{level.value}{range_title}]", size=14)
+        title = f"Blake's metric {column} prices [{level.value}{range_title}]"
+        fig.suptitle(title, size=12)
         ax[0].plot(qualities[DeviationScale.SLIGHTLY], "o", color="b", markersize=2)
         ax[1].plot(qualities[DeviationScale.MODERATELY], "o", color="g", markersize=2)
         ax[2].plot(qualities[DeviationScale.HIGHLY], "o", color="r", markersize=2)
@@ -74,7 +76,9 @@ class BlakeCompletenessMetric:
                         f" {self.incompleteness_label(DeviationScale.HIGHLY, incompleteness_range)}", size=10)
         ax[2].set_xlabel("Time [days]", size=10)
         ax[1].set_ylabel("Incompleteness metric value", size=10)
+        set_ticks_size(ax, "x", 9)
         fig.tight_layout(pad=1.0)
+        save_image(plt, title)
         plt.show()
 
     def incompleteness_label(self, incompleteness: DeviationScale, incompleteness_range: DeviationRange):
@@ -82,4 +86,4 @@ class BlakeCompletenessMetric:
             return self.stock.all_incomplete_parts[incompleteness]
         else:
             return str({column.value: probabilities[incompleteness] for column, probabilities in
-                        self.stock.partially_incomplete_parts.items()})
+                        self.stock.partially_incomplete_parts.items()}).replace("\'", "")

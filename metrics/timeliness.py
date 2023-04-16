@@ -3,7 +3,7 @@ import math
 from matplotlib import pyplot as plt
 
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import DeviationScale, SeriesColumn
+from timeseries.utils import DeviationScale, SeriesColumn, set_ticks_size, save_image
 
 
 class HeinrichTimelinessMetric:
@@ -59,7 +59,8 @@ class HeinrichTimelinessMetric:
 
     def draw_timeliness_qualities(self, times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
         column = column_name.value if column_name is not None else "all columns"
-        fig, ax = plt.subplots(3, 1)
+        fig, ax = plt.subplots(3, 1, figsize=(4, 5))
+        fig.tight_layout(pad=0.5)
         plt.sca(ax[0])
         plt.xticks(*self.prepare_x_ticks(times[DeviationScale.SLIGHTLY]))
         plt.sca(ax[1])
@@ -69,12 +70,15 @@ class HeinrichTimelinessMetric:
         ax[0].plot(times[DeviationScale.SLIGHTLY], qualities[DeviationScale.SLIGHTLY], color="b", markersize=2)
         ax[1].plot(times[DeviationScale.MODERATELY], qualities[DeviationScale.MODERATELY], color="g", markersize=2)
         ax[2].plot(times[DeviationScale.HIGHLY], qualities[DeviationScale.HIGHLY], color="r", markersize=2)
-        ax[0].set_title(f"Timeliness metric {column} prices")
-        ax[2].set_xlabel("Days before measurement]")
+        title = f"Timeliness metric {column} prices"
+        ax[0].set_title(title)
+        ax[2].set_xlabel("Days before measurement")
         ax[1].set_ylabel("Quality")
+        set_ticks_size(ax, "both", 10)
+        save_image(plt, title)
         plt.show()
 
     @staticmethod
     def prepare_x_ticks(times):
-        return [i for i in range(0, len(times), len(times) // 10)], [i for i in times if
-                                                                     int(i) % (len(times) // 10) == 0]
+        return [i for i in range(0, len(times), len(times) // 6)], [i for i in times if
+                                                                    int(i) % (len(times) // 6) == 0]

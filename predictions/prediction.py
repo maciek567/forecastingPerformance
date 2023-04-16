@@ -9,8 +9,8 @@ from timeseries.utils import SeriesColumn
 
 deviations_source_label = "Deviations source"
 deviations_scale_label = "Deviations scale"
-avg_time_label = "Avg elapsed time [ms]"
-std_dev_time_label = "Std dev elapsed time"
+avg_time_label = "Avg time [ms]"
+std_dev_time_label = "Std dev time"
 avg_rms_label = "Avg RMS"
 std_dev_rms_label = "Std dev RMS"
 
@@ -51,7 +51,8 @@ class PredictionModel:
         return series_deviated
 
     def create_model_real(self):
-        return self.method(self.stock.real_series[self.column], self.prediction_start, self.column, DeviationSource.NONE)
+        return self.method(self.stock.real_series[self.column], self.prediction_start, self.column,
+                           DeviationSource.NONE)
 
     def create_model_deviated_set(self):
         return {deviation_source: self.create_model_deviated(deviation_source) for deviation_source in
@@ -86,6 +87,9 @@ class PredictionModel:
         print(
             f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n")
         print(results)
+        print(results.to_latex(index=False,
+                               formatters={"name": str.upper},
+                               float_format="{:.1f}".format))
 
     def compute_statistics(self, deviations_source: DeviationSource, deviations_scale: DeviationScale = None) -> dict:
         elapsed_times = []
