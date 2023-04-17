@@ -13,8 +13,9 @@ from timeseries.utils import SeriesColumn, DeviationSource
 
 
 class ArimaPrediction(Prediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, prediction_start, column, deviation)
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
 
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
@@ -38,8 +39,9 @@ class ArimaPrediction(Prediction):
 
 
 class ManualArima(ArimaPrediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, prediction_start, column, deviation)
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -49,7 +51,7 @@ class ManualArima(ArimaPrediction):
 
     def extrapolate(self, params: dict):
         data_with_prediction = self.data_to_learn.copy()
-        for date, r in self.data_to_learn_and_validate.iloc[self.prediction_start:].items():
+        for date, r in self.data_to_learn_and_validate.iloc[self.training_set_end:].items():
             model = ARIMA(data_with_prediction,
                           order=(params.get("p", 1), self.find_d(), params.get("q", 1))).fit()
 
@@ -62,8 +64,9 @@ class ManualArima(ArimaPrediction):
 
 
 class AutoArima(ArimaPrediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, prediction_start, column, deviation)
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
         self.auto_arima_model = None
 
     def extrapolate_and_measure(self, params: dict):
@@ -75,9 +78,9 @@ class AutoArima(ArimaPrediction):
                                            start_q=params.get("q", 1),
                                            test="adf",
                                            trace=True)
-        periods = len(self.data_to_learn_and_validate) - self.prediction_start
+        periods = self.data_size - self.training_set_end
         extrapolation = self.auto_arima_model.predict(n_periods=periods)
-        return extrapolation
+        return extrapolation[self.prediction_delay:]
 
     def print_summary(self):
         print(self.auto_arima_model.summary())

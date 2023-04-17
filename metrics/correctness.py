@@ -14,23 +14,24 @@ class HeinrichCorrectnessMetric:
         self.custom_alpha = alpha
 
     @staticmethod
-    def d(w_i: float, w_r: float, alpha: float) -> float:
-        return pow(abs(w_i - w_r) / max(abs(w_i), abs(w_r)), alpha)
+    def d(noised: float, real: float, alpha: float) -> float:
+        return pow(abs(noised - real) / max(abs(noised), abs(real)), alpha)
 
-    def heinrich_values(self, w_i: float, w_r: float, alpha: float) -> float:
-        return 1 - self.d(w_i, w_r, alpha)
+    def heinrich_values(self, noised: float, real: float, alpha: float) -> float:
+        return 1 - self.d(noised, real, alpha)
 
-    def heinrich_tuples(self, t: list, e: list, g: list, alpha: list) -> float:
+    def heinrich_tuples(self, noised: dict, real: dict, alpha: dict) -> float:
         quality_sum = 0
-        for i in range(len(t)):
-            quality_sum += self.heinrich_values(t[i], e[i], alpha[i]) * g[i]
-        return quality_sum / sum(g)
+        weights = self.stock.weights
+        for column in SeriesColumn:
+            quality_sum += self.heinrich_values(noised[column], real[column], alpha[column]) * weights[column]
+        return quality_sum / sum(weights.values())
 
-    def heinrich_relation(self, r: list, e: list, tuple_weights: list, alpha: list) -> float:
+    def heinrich_relation(self, noised: list, real: list, alpha: dict) -> float:
         quality_sum = 0
-        for i in range(len(r)):
-            quality_sum += self.heinrich_tuples(r[i], e[i], tuple_weights, alpha)
-        return quality_sum / len(r)
+        for i in range(len(noised)):
+            quality_sum += self.heinrich_tuples(noised[i], real[i], alpha)
+        return quality_sum / len(noised)
 
     def values_qualities(self, column: SeriesColumn, is_alpha: bool = True) -> dict:
         alpha = self.get_alpha(is_alpha)
@@ -44,33 +45,31 @@ class HeinrichCorrectnessMetric:
 
         return qualities
 
-    def tuples_qualities(self, tuple_weights: list, noise_range: DeviationRange = DeviationRange.ALL,
-                         is_alpha: bool = True):
+    def tuples_qualities(self, noise_range: DeviationRange = DeviationRange.ALL, is_alpha: bool = True):
         alpha = self.get_alpha(is_alpha)
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         qualities = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            real_tuple = self.stock.attributes_list(self.stock.real_series, i)
+            real_tuple = self.stock.get_dict_for_tuple(self.stock.real_series, i)
             for scale in DeviationScale:
-                qualities[scale].append(self.heinrich_tuples(self.stock.attributes_list(deviated_series[scale], i),
-                                                             real_tuple, tuple_weights, list(alpha.values())))
+                qualities[scale].append(self.heinrich_tuples(self.stock.get_dict_for_tuple(deviated_series[scale], i),
+                                                             real_tuple, alpha))
 
         return qualities
 
-    def relation_qualities(self, tuple_weights: list, noise_range: DeviationRange = DeviationRange.ALL,
-                           is_alpha: bool = True) -> dict:
+    def relation_qualities(self, noise_range: DeviationRange = DeviationRange.ALL, is_alpha: bool = True) -> dict:
         alpha = self.get_alpha(is_alpha)
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         real_tuples = []
         deviated_tuples = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.time_series_end - self.stock.time_series_start):
-            real_tuples.append(self.stock.attributes_list(self.stock.real_series, i))
+            real_tuples.append(self.stock.get_dict_for_tuple(self.stock.real_series, i))
             for scale in DeviationScale:
-                deviated_tuples[scale].append(self.stock.attributes_list(deviated_series[scale], i))
+                deviated_tuples[scale].append(self.stock.get_dict_for_tuple(deviated_series[scale], i))
 
-        return {scale: self.heinrich_relation(deviated_tuples[scale], real_tuples, tuple_weights, list(alpha.values()))
+        return {scale: self.heinrich_relation(deviated_tuples[scale], real_tuples, alpha)
                 for scale in DeviationScale}
 
     def get_alpha(self, is_alpha: bool) -> dict:

@@ -26,7 +26,7 @@ class PredictionModel:
         self.column = column
         self.deviation_range = deviation_range
         self.deviations_source = deviation_source if deviation_source is not None \
-            else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS]
+            else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
         self.deviations_scale = deviations_scale if deviations_scale is not None \
             else [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
         self.iterations = iterations
@@ -51,7 +51,7 @@ class PredictionModel:
         return series_deviated
 
     def create_model_real(self):
-        return self.method(self.stock.real_series[self.column], self.prediction_start, self.column,
+        return self.method(self.stock.real_series[self.column], self.prediction_start, 0, self.column,
                            DeviationSource.NONE)
 
     def create_model_deviated_set(self):
@@ -61,13 +61,15 @@ class PredictionModel:
     def create_model_deviated(self, deviation_source: DeviationSource):
         return {deviation_scale: self.method(
             self.get_series_deviated(self.deviation_range)[deviation_source][deviation_scale][self.column],
-            self.prediction_start, self.column,
-            self.deviations_source) for deviation_scale in self.deviations_scale}
+            self.prediction_start,
+            self.stock.all_obsolete_scale[deviation_scale] if deviation_source == DeviationSource.TIMELINESS else 0,
+            self.column, deviation_source)
+            for deviation_scale in self.deviations_scale}
 
-    def present_prediction(self, source: DeviationSource = None, strength: DeviationScale = None) -> None:
+    def present_prediction(self, source: DeviationSource = None, scale: DeviationScale = None) -> None:
         model = self.model_real
         if source is not None:
-            model = self.model_deviated[source][strength]
+            model = self.model_deviated[source][scale]
         result = model.extrapolate(self.additional_params)
         model.plot_extrapolation(result)
         print("RMS: %r " % utils.calculate_rms(model, result))
@@ -111,11 +113,14 @@ class PredictionModel:
 
 
 class Prediction:
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
-        self.data_to_learn = prices.dropna()[:prediction_start]
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        self.data_to_learn = prices.dropna()[:training_set_end]
         self.data_to_learn_and_validate = prices.dropna()
         self.data_size = len(self.data_to_learn_and_validate)
-        self.prediction_start = prediction_start
+        self.training_set_end = training_set_end
+        self.prediction_delay = prediction_delay
+        self.prediction_start = training_set_end + prediction_delay
         self.column = column
         self.deviation = deviation
 

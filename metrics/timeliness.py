@@ -15,16 +15,16 @@ class HeinrichTimelinessMetric:
     def timeliness_values(decline: float, age: float) -> float:
         return math.exp(-decline * age)
 
-    def timeliness_tuples(self, declines: dict, age: float, weights: dict) -> float:
+    def timeliness_tuples(self, declines: dict, age: float) -> float:
         quality_sum = 0
         for column in SeriesColumn:
-            quality_sum += self.timeliness_values(declines[column], age) * weights[column]
-        return quality_sum / sum(weights.values())
+            quality_sum += self.timeliness_values(declines[column], age) * self.stock.weights[column]
+        return quality_sum / sum(self.stock.weights.values())
 
-    def timeliness_relations(self, declines: dict, ages_list: list, weights: dict) -> float:
+    def timeliness_relations(self, declines: dict, ages_list: list) -> float:
         quality_sum = 0
         for i in range(len(ages_list)):
-            quality_sum += self.timeliness_tuples(declines, ages_list[i], weights)
+            quality_sum += self.timeliness_tuples(declines, ages_list[i])
         return quality_sum / len(ages_list)
 
     def values_qualities(self, decline: float, measurement_times: dict) -> tuple:
@@ -38,24 +38,24 @@ class HeinrichTimelinessMetric:
 
         return deltas, qualities
 
-    def tuples_qualities(self, declines: dict, measurement_times: dict, weights: dict) -> tuple:
+    def tuples_qualities(self, declines: dict, measurement_times: dict) -> tuple:
         deltas = {}
         qualities = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
             deltas[scale], ages = self.stock.get_ages(measurement_times[scale])
             for i in range(self.stock.time_series_end - self.stock.time_series_start):
-                qualities[scale].append(self.timeliness_tuples(declines, ages[i], weights))
+                qualities[scale].append(self.timeliness_tuples(declines, ages[i]))
 
         return deltas, qualities
 
-    def relation_qualities(self, declines: dict, measurement_times: dict, weights: dict) -> dict:
+    def relation_qualities(self, declines: dict, measurement_times: dict) -> dict:
         ages = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
             time_diffs, ages[scale] = self.stock.get_ages(measurement_times[scale])
 
-        return {scale: self.timeliness_relations(declines, ages[scale], weights) for scale in DeviationScale}
+        return {scale: self.timeliness_relations(declines, ages[scale]) for scale in DeviationScale}
 
     def draw_timeliness_qualities(self, times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
         column = column_name.value if column_name is not None else "all columns"

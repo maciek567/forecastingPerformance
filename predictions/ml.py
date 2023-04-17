@@ -18,15 +18,16 @@ from utils import PredictionMethod
 
 
 class Reservoir(Prediction):
-    def __init__(self, prices: Series, prediction_start: int, column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, prediction_start, column, deviation)
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict):
         mg17 = dl.loader_explicit(utils.normalize(self.data_to_learn_and_validate),
-                                  test_size=self.data_size - self.prediction_start)
+                                  test_size=self.data_size - self.training_set_end)
         x, x_test, y, y_test = mg17()
 
         esn = DeepESN(num_layers=2,
@@ -34,12 +35,12 @@ class Reservoir(Prediction):
         esn.fit(x, y)
 
         predictions = []
-        for j in range(self.data_size - self.prediction_start):
+        for j in range(self.data_size - self.training_set_end):
             point_to_predict = x_test[j: j + 1]
             predicted_value = esn(point_to_predict)
             predictions.append(predicted_value)
 
-        res = torch.vstack(predictions)
+        res = torch.vstack(predictions[self.prediction_delay:])
         return utils.denormalize(res.numpy(), self.data_to_learn_and_validate)
 
     def plot_extrapolation(self, result) -> None:
@@ -47,8 +48,9 @@ class Reservoir(Prediction):
 
 
 class XGBoost(Prediction):
-    def __init__(self, prices, prediction_start, column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, prediction_start, column, deviation)
+    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
+                 deviation: DeviationSource):
+        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -83,7 +85,7 @@ class XGBoost(Prediction):
     def extrapolate(self, params: dict) -> list:
         indices = pd.DataFrame({'X': np.linspace(0, self.data_size, self.data_size)})
         x, x_test, y, y_test = train_test_split(indices, self.data_to_learn_and_validate.values,
-                                                test_size=self.data_size - self.prediction_start,
+                                                test_size=self.data_size - self.training_set_end,
                                                 shuffle=False)
 
         if params.get("optimize", False):
@@ -107,7 +109,7 @@ class XGBoost(Prediction):
             model = XGBRegressor(n_estimators=250)
 
         res = self.forecast(x, y, x_test, model)
-        return res
+        return res[self.prediction_delay:]
 
     def plot_extrapolation(self, result) -> None:
         utils.plot_extrapolation(self, result, PredictionMethod.XGBoost)
