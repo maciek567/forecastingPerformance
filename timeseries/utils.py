@@ -1,7 +1,8 @@
-from enum import Enum
 import os
-import matplotlib.font_manager
+from enum import Enum
+
 import matplotlib
+import matplotlib.font_manager
 
 
 class SeriesColumn(Enum):
@@ -20,10 +21,28 @@ class DeviationSource(Enum):
     TIMELINESS = "obsolescence"
 
 
+def sources_short():
+    return {
+        DeviationSource.NONE: "-",
+        DeviationSource.NOISE: "N",
+        DeviationSource.INCOMPLETENESS: "I",
+        DeviationSource.TIMELINESS: "T"
+    }
+
+
 class DeviationScale(Enum):
     SLIGHTLY = "slightly"
     MODERATELY = "moderately"
     HIGHLY = "highly"
+
+
+def scales_short():
+    return {
+        None: "-",
+        DeviationScale.SLIGHTLY: "S",
+        DeviationScale.MODERATELY: "M",
+        DeviationScale.HIGHLY: "H",
+    }
 
 
 class DeviationRange(Enum):
