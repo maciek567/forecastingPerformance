@@ -50,6 +50,12 @@ class DeviationRange(Enum):
     PARTIAL = "partially"
 
 
+class Deviation:
+    def __init__(self, method, scale):
+        self.method = method
+        self.scale = scale
+
+
 def set_legend(ax):
     legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.2))
     legend.get_frame().set_alpha(0.5)

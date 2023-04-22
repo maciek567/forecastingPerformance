@@ -32,7 +32,7 @@ class HeinrichTimelinessMetric:
         qualities = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
-            deltas[scale], ages = self.stock.get_ages(measurement_times[scale])
+            deltas[scale], ages = self.stock.obsolescence.get_ages(measurement_times[scale])
             for i in range(self.stock.time_series_end - self.stock.time_series_start):
                 qualities[scale].append(self.timeliness_values(decline, ages[i]))
 
@@ -43,7 +43,7 @@ class HeinrichTimelinessMetric:
         qualities = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
-            deltas[scale], ages = self.stock.get_ages(measurement_times[scale])
+            deltas[scale], ages = self.stock.obsolescence.get_ages(measurement_times[scale])
             for i in range(self.stock.time_series_end - self.stock.time_series_start):
                 qualities[scale].append(self.timeliness_tuples(declines, ages[i]))
 
@@ -53,7 +53,7 @@ class HeinrichTimelinessMetric:
         ages = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
-            time_diffs, ages[scale] = self.stock.get_ages(measurement_times[scale])
+            time_diffs, ages[scale] = self.stock.obsolescence.get_ages(measurement_times[scale])
 
         return {scale: self.timeliness_relations(declines, ages[scale]) for scale in DeviationScale}
 

@@ -100,7 +100,7 @@ class HeinrichCorrectnessMetric:
 
     def noises_label(self, strength: DeviationScale, noise_range: DeviationRange) -> str:
         if noise_range == DeviationRange.ALL:
-            return str(self.stock.all_noises_strength[strength])
+            return str(self.stock.noises.all_noises_strength[strength])
         else:
             return "\n" + str({column.value: strengths[strength] for column, strengths in
-                               self.stock.partially_noised_strength.items()}).replace("\'", "")
+                               self.stock.noises.partially_noised_strength.items()}).replace("\'", "")

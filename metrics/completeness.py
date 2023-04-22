@@ -83,7 +83,7 @@ class BlakeCompletenessMetric:
 
     def incompleteness_label(self, incompleteness: DeviationScale, incompleteness_range: DeviationRange):
         if incompleteness_range == DeviationRange.ALL:
-            return self.stock.all_incomplete_parts[incompleteness]
+            return self.stock.incompleteness.all_incomplete_parts[incompleteness]
         else:
             return str({column.value: probabilities[incompleteness] for column, probabilities in
-                        self.stock.partially_incomplete_parts.items()}).replace("\'", "")
+                        self.stock.incompleteness.partially_incomplete_parts.items()}).replace("\'", "")

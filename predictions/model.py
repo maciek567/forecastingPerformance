@@ -25,7 +25,7 @@ class PredictionModel:
         self.column = column
         self.deviation_range = deviation_range
         self.deviations_source = deviation_source if deviation_source is not None \
-            else [DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
+            else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
         self.deviations_scale = deviations_scale if deviations_scale is not None \
             else [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
         self.iterations = iterations
@@ -63,7 +63,8 @@ class PredictionModel:
             self.method(
                 self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
                 self.prediction_start,
-                self.stock.all_obsolete_scale[deviation_scale] if source == DeviationSource.TIMELINESS else 0,
+                self.stock.obsolescence.obsolescence_scale[
+                    deviation_scale] if source == DeviationSource.TIMELINESS else 0,
                 self.column,
                 source)
             for deviation_scale in self.deviations_scale}
