@@ -11,6 +11,7 @@ class IncompleteSeries:
         self.partially_incomplete_parts = partially_incomplete_parts
         self.set_all_incomplete_series()
         self.set_partially_incomplete_series()
+        self.set_mitigated_incompleteness_series()
 
     @staticmethod
     def set_all_incomplete_parts(all_incomplete_parts: dict):
@@ -25,6 +26,13 @@ class IncompleteSeries:
         if self.partially_incomplete_parts is not None:
             self.model.partially_deviated_series[DeviationSource.INCOMPLETENESS] = \
                 self.nullify_some_series_set(self.partially_incomplete_parts)
+
+    def set_mitigated_incompleteness_series(self):
+        self.model.mitigated_deviations_series[DeviationSource.INCOMPLETENESS] = \
+            {strength: {column: self.apply_interpolation(
+                self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column])
+                        for column in SeriesColumn}
+             for strength in DeviationScale}
 
     def nullify_all_series(self, incomplete_part: float) -> dict:
         return self.model.deviate_all_series(
@@ -50,3 +58,7 @@ class IncompleteSeries:
             else:
                 incomplete_data.append(np.nan)
         return Series(incomplete_data)
+
+    @staticmethod
+    def apply_interpolation(series: Series):
+        return series.interpolate()

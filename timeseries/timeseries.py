@@ -21,6 +21,7 @@ class StockMarketSeries:
         self.weights = weights
         self.all_deviated_series = {}
         self.partially_deviated_series = {}
+        self.mitigated_deviations_series = {}
         self.noises = NoisedSeries(self, all_noises_strength, partially_noised_strength)
         self.incompleteness = IncompleteSeries(self, all_incomplete_parts, partially_incomplete_parts)
         self.obsolescence = ObsolescenceSeries(self, obsoleteness_scale)
@@ -55,20 +56,11 @@ class StockMarketSeries:
             {column: deviation.method(self.real_series[column], deviation.scale)
              for column, deviation in series_to_deviate.items()}
 
-    def plot_single_series(self, data: Series, column: SeriesColumn, deviation: str = "", plot_type="-") -> None:
-        plt.figure(figsize=(10, 4))
-        plt.plot(data.values, plot_type)
-        title = f"{self.company_name} {deviation} {column.value} prices"
-        plt.title(title)
-        plt.xlabel("Time [days]")
-        plt.ylabel("Prices [USD]")
-        save_image(plt, title)
-
-    def plot_multiple_series(self, title: str, **kwargs) -> None:
+    def plot_series(self, title: str, **kwargs) -> None:
         fig = plt.figure(figsize=(10, 4))
         ax = fig.add_subplot(111, axisbelow=True)
         for label, series in (kwargs.items()):
-            ax.plot(series.values, markersize=1.5, label=label)
+            ax.plot(series.values, markersize=1.0, label=label)
         title = f"{self.company_name} {title}"
         ax.set_title(title)
         ax.set_xlabel("Time [days]")

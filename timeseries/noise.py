@@ -1,5 +1,7 @@
 import numpy as np
+import pandas as pd
 from pandas import Series
+from pykalman import KalmanFilter
 
 from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, Deviation
 
@@ -11,6 +13,7 @@ class NoisedSeries:
         self.partially_noised_strength = partially_noised_strength
         self.set_all_noised_series()
         self.set_partially_noised_series()
+        self.set_mitigated_noises_series()
 
     @staticmethod
     def set_all_noises_strength(all_noises_strength: dict):
@@ -25,6 +28,13 @@ class NoisedSeries:
         if self.partially_noised_strength is not None:
             self.model.partially_deviated_series[DeviationSource.NOISE] = \
                 self.noise_some_series_set(self.partially_noised_strength)
+
+    def set_mitigated_noises_series(self):
+        self.model.mitigated_deviations_series[DeviationSource.NOISE] = \
+            {strength: {
+                column: self.apply_kalman(self.model.all_deviated_series[DeviationSource.NOISE][strength][column])
+                for column in SeriesColumn}
+             for strength in DeviationScale}
 
     def noise_all_series(self, power: float) -> dict:
         return self.model.deviate_all_series(
@@ -44,3 +54,20 @@ class NoisedSeries:
         std_dev = power
         noise = np.random.normal(mean, std_dev, self.model.time_series_end - self.model.time_series_start)
         return data + noise
+
+    @staticmethod
+    def apply_kalman(series: Series):
+        observations = pd.DataFrame(series)
+        initial_value_guess = observations.iloc[0]
+        observation_covariance = np.diag([0.5]) ** 2
+
+        transition_covariance = np.diag([0.2]) ** 2
+        kf = KalmanFilter(
+            initial_state_mean=initial_value_guess,
+            initial_state_covariance=observation_covariance,
+            observation_covariance=observation_covariance,
+            transition_covariance=transition_covariance,
+        )
+        smoothed_series = kf.smooth(observations)[0]
+        return Series([value[0] for value in smoothed_series.tolist()])
+
