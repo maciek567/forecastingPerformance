@@ -1,6 +1,5 @@
-import math
-
 import matplotlib.pyplot as plt
+import numpy as np
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
@@ -14,11 +13,11 @@ class BlakeCompletenessMetric:
 
     @staticmethod
     def blake_values(value: float) -> float:
-        return 1.0 if value != 0.0 else 0.0
+        return 0.0 if np.isnan(value) else 1.0
 
     @staticmethod
     def blake_tuples(values: list) -> bool:
-        return not (any(math.isclose(i, 0.0) for i in values))
+        return not (any(np.isnan(i) for i in values))
 
     def blake_relation(self, relation: list) -> float:
         number_of_zero_tuples = 0

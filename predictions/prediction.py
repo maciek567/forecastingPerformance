@@ -15,14 +15,15 @@ class PredictionResults:
 
 
 class Prediction:
-    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
-                 deviation: DeviationSource):
-        self.data_to_learn = prices.dropna()[:training_set_end]
-        self.data_to_learn_and_validate = prices.dropna()
+    def __init__(self, prices: Series, real_prices: Series, training_set_end: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource):
+        self.data_to_learn = prices[:training_set_end].dropna()
+        self.data_to_validate = Series(real_prices.values[training_set_end:])
+        self.data_to_learn_and_validate = self.data_to_learn.append(self.data_to_validate)
         self.data_size = len(self.data_to_learn_and_validate)
-        self.training_set_end = training_set_end
+        self.training_set_end = len(self.data_to_learn)
         self.prediction_delay = prediction_delay
-        self.prediction_start = training_set_end + prediction_delay
+        self.prediction_start = self.training_set_end + prediction_delay
         self.column = column
         self.deviation = deviation
 

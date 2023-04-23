@@ -51,8 +51,12 @@ class PredictionModel:
         return series_deviated
 
     def create_model_real(self):
-        return self.method(self.stock.real_series[self.column], self.prediction_start, 0, self.column,
-                           DeviationSource.NONE)
+        return self.method(prices=self.stock.real_series[self.column],
+                           real_prices=self.stock.real_series[self.column],
+                           training_set_end=self.prediction_start,
+                           prediction_delay=0,
+                           column=self.column,
+                           deviation=DeviationSource.NONE)
 
     def create_model_deviated_set(self):
         return {deviation_source: self.create_model_deviated(deviation_source) for deviation_source in
@@ -61,12 +65,13 @@ class PredictionModel:
     def create_model_deviated(self, source: DeviationSource):
         return {deviation_scale:
             self.method(
-                self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
-                self.prediction_start,
-                self.stock.obsolescence.obsolescence_scale[
+                prices=self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
+                real_prices=self.stock.real_series[self.column],
+                training_set_end=self.prediction_start,
+                prediction_delay=self.stock.obsolescence.obsolescence_scale[
                     deviation_scale] if source == DeviationSource.TIMELINESS else 0,
-                self.column,
-                source)
+                column=self.column,
+                deviation=source)
             for deviation_scale in self.deviations_scale}
 
     def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None) -> None:

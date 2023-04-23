@@ -48,5 +48,5 @@ class IncompleteSeries:
             if incompleteness[i] == 1:
                 incomplete_data.append(data[i])
             else:
-                incomplete_data.append(0.0)
+                incomplete_data.append(np.nan)
         return Series(incomplete_data)

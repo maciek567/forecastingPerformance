@@ -18,9 +18,9 @@ from utils import PredictionMethod
 
 
 class Reservoir(Prediction):
-    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
-                 deviation: DeviationSource):
-        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
+    def __init__(self, prices: Series, real_prices: Series, training_set_end: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -40,7 +40,7 @@ class Reservoir(Prediction):
             predicted_value = esn(point_to_predict)
             predictions.append(predicted_value)
 
-        res = torch.vstack(predictions[self.prediction_delay:])
+        res = torch.vstack(predictions)
         return utils.denormalize(res.numpy(), self.data_to_learn_and_validate)
 
     def plot_extrapolation(self, result) -> None:
@@ -48,9 +48,9 @@ class Reservoir(Prediction):
 
 
 class XGBoost(Prediction):
-    def __init__(self, prices: Series, training_set_end: int, prediction_delay: int, column: SeriesColumn,
-                 deviation: DeviationSource):
-        super().__init__(prices, training_set_end, prediction_delay, column, deviation)
+    def __init__(self, prices: Series, real_prices: Series, training_set_end: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource):
+        super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
 
     def extrapolate_and_measure(self, params: dict):
         return super().execute_and_measure(self.extrapolate, params)
@@ -108,8 +108,7 @@ class XGBoost(Prediction):
         else:
             model = XGBRegressor(n_estimators=250)
 
-        res = self.forecast(x, y, x_test, model)
-        return res[self.prediction_delay:]
+        return self.forecast(x, y, x_test, model)
 
     def plot_extrapolation(self, result) -> None:
         utils.plot_extrapolation(self, result, PredictionMethod.XGBoost)
