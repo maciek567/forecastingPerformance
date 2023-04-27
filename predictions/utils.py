@@ -15,17 +15,17 @@ class PredictionMethod(Enum):
 
 def calculate_rmse(model, result: ndarray) -> float:
     actual = model.data_to_validate.values
-    return round(np.sqrt(np.mean((result - actual) ** 2)), 3)
+    return np.sqrt(np.mean((result - actual) ** 2))
 
 
 def calculate_mae(model, result: ndarray) -> float:
     actual = model.data_to_validate.values
-    return round(np.mean(abs(result - actual)) * 1.0, 3)
+    return np.mean(abs(result - actual)) * 1.0
 
 
 def calculate_mape(model, result: ndarray) -> float:
     actual = model.data_to_validate.values
-    return round(np.mean(abs((result - actual) / actual)) * 100.0, 3)
+    return np.mean(abs((result - actual) / actual)) * 100.0
 
 
 def normalize(series: Series) -> DataFrame:

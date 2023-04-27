@@ -12,7 +12,7 @@ from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
 from predictions import utils
-from predictions.prediction import Prediction
+from predictions.prediction import Prediction, PredictionResults
 from timeseries.utils import SeriesColumn, DeviationSource
 from utils import PredictionMethod
 
@@ -22,10 +22,10 @@ class Reservoir(Prediction):
                  column: SeriesColumn, deviation: DeviationSource):
         super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
 
-    def extrapolate_and_measure(self, params: dict):
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict):
+    def extrapolate(self, params: dict) -> Series:
         mg17 = dl.loader_explicit(utils.normalize(self.data_to_learn_and_validate),
                                   test_size=self.data_size - self.training_set_end)
         x, x_test, y, y_test = mg17()
@@ -52,7 +52,7 @@ class XGBoost(Prediction):
                  column: SeriesColumn, deviation: DeviationSource):
         super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
 
-    def extrapolate_and_measure(self, params: dict):
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
     @staticmethod
@@ -79,10 +79,10 @@ class XGBoost(Prediction):
         return result_y
 
     @staticmethod
-    def evaluate_model(real_y, predicted_y):
+    def evaluate_model(real_y, predicted_y) -> ndarray:
         return np.sum((real_y * 100 - predicted_y * 100) ** 2)
 
-    def extrapolate(self, params: dict) -> list:
+    def extrapolate(self, params: dict) -> ndarray:
         indices = pd.DataFrame({'X': np.linspace(0, self.data_size, self.data_size)})
         x, x_test, y, y_test = train_test_split(indices, self.data_to_learn_and_validate.values,
                                                 test_size=self.data_size - self.training_set_end,
@@ -92,7 +92,7 @@ class XGBoost(Prediction):
             space = self.optimization_space()
 
             @use_named_args(space)
-            def objective(**params) -> float:
+            def objective(**params) -> ndarray:
                 model = self.create_model(**params)
                 result_y = self.forecast(x, y, x_test, model)
                 return self.evaluate_model(y_test, result_y)

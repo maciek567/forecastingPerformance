@@ -1,5 +1,6 @@
 from statistics import mean, stdev
 
+import pandas as pd
 from pandas import DataFrame
 
 from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
@@ -7,7 +8,7 @@ from timeseries.utils import SeriesColumn, sources_short, scales_short
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"
-avg_time_label = "Time"
+avg_time_label = "Time [ms]"
 std_dev_time_label = "Time SD"
 avg_rmse_label = "RMSE"
 avg_mae_label = "MAE"
@@ -92,12 +93,13 @@ class PredictionModel:
                 result = self.compute_statistics(deviation_source, deviations_scale)
                 results = results.append(result, ignore_index=True)
 
+        pd.set_option("display.precision", 2)
         print(
             f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n")
         print(results)
         print(results.to_latex(index=False,
                                formatters={"name": str.upper},
-                               float_format="{:.1f}".format))
+                               float_format="{:.2f}".format))
 
     def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None) -> dict:
         results = []

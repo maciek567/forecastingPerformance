@@ -7,7 +7,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
 
 from predictions import utils
-from predictions.prediction import Prediction
+from predictions.prediction import Prediction, PredictionResults
 from predictions.utils import PredictionMethod
 from timeseries.utils import SeriesColumn, DeviationSource
 
@@ -43,13 +43,13 @@ class ManualArima(ArimaPrediction):
                  column: SeriesColumn, deviation: DeviationSource):
         super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
 
-    def extrapolate_and_measure(self, params: dict):
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
     def find_d(self):
         return ndiffs(self.data_to_learn, test='adf')
 
-    def extrapolate(self, params: dict):
+    def extrapolate(self, params: dict) -> Series:
         data_with_prediction = self.data_to_learn.copy()
         for date, r in self.data_to_learn_and_validate.iloc[self.training_set_end:].items():
             model = ARIMA(data_with_prediction,
@@ -69,10 +69,10 @@ class AutoArima(ArimaPrediction):
         super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
         self.auto_arima_model = None
 
-    def extrapolate_and_measure(self, params: dict):
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict):
+    def extrapolate(self, params: dict) -> Series:
         self.auto_arima_model = auto_arima(self.data_to_learn,
                                            stat_p=params.get("p", 1),
                                            start_q=params.get("q", 1),

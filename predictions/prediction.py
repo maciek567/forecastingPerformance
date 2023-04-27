@@ -30,11 +30,11 @@ class Prediction:
     def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionResults:
         start_time = time.time_ns()
         extrapolation = extrapolation_method(params)
-        elapsed_time = round((time.time_ns() - start_time) / 1e6)
+        elapsed_time_ms = (time.time_ns() - start_time) / 1e6
 
         rmse = utils.calculate_rmse(self, extrapolation)
         mae = utils.calculate_mae(self, extrapolation)
         mape = utils.calculate_mape(self, extrapolation)
-        results = PredictionResults(elapsed_time, rmse, mae, mape)
+        results = PredictionResults(elapsed_time_ms, rmse, mae, mape)
 
         return results
