@@ -8,7 +8,7 @@ import matplotlib.font_manager
 class SeriesColumn(Enum):
     OPEN = "open"
     CLOSE = "close"
-    ADJ_CLOSE = "adjclose"
+    ADJ_CLOSE = "adj_close"
     HIGH = "high"
     LOW = "low"
     VOLUME = "volume"

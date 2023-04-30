@@ -138,4 +138,4 @@ secrets/vault.json
 /auxiliary/
 
 # generated data
-/data/
+data/

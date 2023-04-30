@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pandas import Series
 
+from provider.provider import YFinanceProvider
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
@@ -9,14 +10,13 @@ from timeseries.utils import SeriesColumn, DeviationSource, DeviationRange, Devi
 
 
 class StockMarketSeries:
-    def __init__(self, company_name: str, path: str, time_series_start: int, time_series_end: int, weights: dict,
+    def __init__(self, company_name: str, time_series_start: str, time_series_values: int, weights: dict,
                  all_noises_strength: dict = None, all_incomplete_parts: dict = None, obsoleteness_scale: dict = None,
                  partially_noised_strength: dict = None, partially_incomplete_parts: dict = None):
         self.company_name = company_name
-        self.path = path
-        self.time_series_start = time_series_start
-        self.time_series_end = time_series_end
-        self.data = pd.read_csv(self.path)
+        self.data = YFinanceProvider.load_csv(company_name)
+        self.time_series_start = self.find_start_date(time_series_start)
+        self.time_series_end = self.time_series_start + time_series_values
         self.real_series = self.create_multiple_series()
         self.weights = weights
         self.all_deviated_series = {}
@@ -26,8 +26,11 @@ class StockMarketSeries:
         self.incompleteness = IncompleteSeries(self, all_incomplete_parts, partially_incomplete_parts)
         self.obsolescence = ObsolescenceSeries(self, obsoleteness_scale)
 
+    def find_start_date(self, time_series_start: str) -> int:
+        return self.data.index[self.data['Date'] == time_series_start].values.tolist()[0]
+
     def create_single_series(self, column_name: SeriesColumn, extra_days: int) -> Series:
-        series = pd.Series(list(self.data[column_name]), index=self.data["date"])
+        series = pd.Series(list(self.data[column_name]), index=self.data["Date"])
         return series[self.time_series_start:self.time_series_end + extra_days]
 
     def create_multiple_series(self, extra_days: int = 0) -> dict:
