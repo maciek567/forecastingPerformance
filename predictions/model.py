@@ -2,7 +2,7 @@ from statistics import mean, stdev
 
 import pandas as pd
 from pandas import DataFrame
-
+import warnings
 from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
 from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short
 
@@ -76,7 +76,8 @@ class PredictionModel:
         return {deviation_scale:
             self.method(
                 prices=self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
-                real_prices=self.stock.real_series[self.column],
+                real_prices=self.stock.real_series[self.column] if source is not DeviationSource.TIMELINESS else
+                self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
                 training_set_end=self.prediction_start,
                 prediction_delay=self.stock.obsolescence.obsolescence_scale[
                     deviation_scale] if source == DeviationSource.TIMELINESS else 0,
@@ -120,10 +121,12 @@ class PredictionModel:
         for deviation_source in self.deviations_sources:
             for deviation_scale in self.deviations_scale:
                 deviated = self.compute_statistics(deviation_source, deviation_scale, False)
-                results = pd.concat([results, pd.DataFrame([deviated])], ignore_index=True)
+                if deviated:
+                    results = pd.concat([results, pd.DataFrame([deviated])], ignore_index=True)
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
                     mitigated = self.compute_statistics(deviation_source, deviation_scale, True)
-                    results = pd.concat([results, pd.DataFrame([mitigated])], ignore_index=True)
+                    if mitigated:
+                        results = pd.concat([results, pd.DataFrame([mitigated])], ignore_index=True)
 
         pd.set_option("display.precision", 2)
         print(
@@ -138,22 +141,28 @@ class PredictionModel:
         results = []
 
         for j in range(self.iterations):
-            prediction_results = None
-            if source is DeviationSource.NONE:
-                prediction_results = self.model_real.extrapolate_and_measure(self.additional_params)
-            elif not mitigation:
-                prediction_results = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
-            else:
-                prediction_results = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
-            results.append(prediction_results)
+            result = None
+            try:
+                if source is DeviationSource.NONE:
+                    result = self.model_real.extrapolate_and_measure(self.additional_params)
+                elif not mitigation:
+                    result = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
+                else:
+                    result = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
+                results.append(result)
+            except Exception as e:
+                warnings.warn("Prediction method thrown an exception: " + str(e))
 
-        return {
-            deviations_source_label: sources_short()[source],
-            deviations_scale_label: scales_short()[scale],
-            deviations_mitigation_label: mitigation_short()[mitigation],
-            avg_time_label: mean([r.elapsed_time for r in results]),
-            std_dev_time_label: stdev([r.elapsed_time for r in results]),
-            avg_rmse_label: mean([r.rmse for r in results]),
-            avg_mae_label: mean([r.mae for r in results]),
-            avg_mape_label: mean(r.mape for r in results),
-            std_dev_mape_label: stdev([r.mape for r in results])}
+        dict_result = {}
+        if results:
+            dict_result = {
+                deviations_source_label: sources_short()[source],
+                deviations_scale_label: scales_short()[scale],
+                deviations_mitigation_label: mitigation_short()[mitigation],
+                avg_time_label: mean([r.elapsed_time for r in results]),
+                std_dev_time_label: stdev([r.elapsed_time for r in results]),
+                avg_rmse_label: mean([r.rmse for r in results]),
+                avg_mae_label: mean([r.mae for r in results]),
+                avg_mape_label: mean(r.mape for r in results),
+                std_dev_mape_label: stdev([r.mape for r in results])}
+        return dict_result
