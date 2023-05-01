@@ -1,5 +1,8 @@
 from datetime import date, datetime, timedelta
 
+import pandas as pd
+from pandas import Series
+
 from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource
 
 DAYS_IN_YEAR = 365
@@ -21,7 +24,11 @@ class ObsolescenceSeries:
             {strength: self.obsolete_all_series(self.obsolescence_scale[strength]) for strength in DeviationScale}
 
     def obsolete_all_series(self, obsoleteness_scale: int) -> dict:
-        return self.model.create_multiple_series(extra_days=obsoleteness_scale)
+        return {column: self.single_series_with_extra_days(column.value, obsoleteness_scale) for column in SeriesColumn}
+
+    def single_series_with_extra_days(self, column_name: SeriesColumn, extra_days: int) -> Series:
+        series = pd.Series(list(self.model.data[column_name]), index=self.model.data["Date"])
+        return series[self.model.time_series_start:self.model.time_series_end + extra_days]
 
     def get_ages(self, measurement_time: int = None) -> tuple:
         dates = self.model.real_series[SeriesColumn.OPEN].index.tolist()

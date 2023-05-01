@@ -30,7 +30,7 @@ class BlakeCompletenessMetric:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS)
         qualities = {scale: [] for scale in DeviationScale}
 
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             for scale in DeviationScale:
                 qualities[scale].append(self.blake_values(deviated_series[scale][column][i]))
 
@@ -40,7 +40,7 @@ class BlakeCompletenessMetric:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         qualities = {scale: [] for scale in DeviationScale}
 
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             for scale in DeviationScale:
                 qualities[scale].append(self.blake_tuples(self.stock.get_list_for_tuple(deviated_series[scale], i)))
 
@@ -49,7 +49,7 @@ class BlakeCompletenessMetric:
     def relation_qualities(self, incompleteness_range: DeviationRange = DeviationRange.ALL) -> dict:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         deviated_tuples = {scale: [] for scale in DeviationScale}
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             for scale in DeviationScale:
                 deviated_tuples[scale].append(self.stock.get_list_for_tuple(deviated_series[scale], i))
 

@@ -45,6 +45,13 @@ def scales_short():
     }
 
 
+def mitigation_short():
+    return {
+        True: "Y",
+        False: "N"
+    }
+
+
 class DeviationRange(Enum):
     ALL = "all"
     PARTIAL = "partially"

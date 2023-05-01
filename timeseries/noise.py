@@ -52,7 +52,7 @@ class NoisedSeries:
     def add_noise(self, data: Series, power: float) -> Series:
         mean = 0
         std_dev = power
-        noise = np.random.normal(mean, std_dev, self.model.time_series_end - self.model.time_series_start)
+        noise = np.random.normal(mean, std_dev, self.model.data_size)
         return data + noise
 
     @staticmethod

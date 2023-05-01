@@ -4,10 +4,11 @@ import pandas as pd
 from pandas import DataFrame
 
 from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
-from timeseries.utils import SeriesColumn, sources_short, scales_short
+from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"
+deviations_mitigation_label = "Mitigation"
 avg_time_label = "Time [ms]"
 std_dev_time_label = "Time SD"
 avg_rmse_label = "RMSE"
@@ -19,37 +20,41 @@ std_dev_mape_label = "MAPE SD"
 class PredictionModel:
 
     def __init__(self, stock: StockMarketSeries, prediction_start: int, column: SeriesColumn,
-                 deviation_range: DeviationRange = DeviationRange.ALL, deviation_source: DeviationSource = None,
-                 deviations_scale: DeviationScale = None, iterations: int = 5):
+                 deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
+                 is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5):
         self.stock = stock
-        self.prediction_start = prediction_start - stock.time_series_start
+        self.prediction_start = prediction_start
         self.column = column
         self.deviation_range = deviation_range
-        self.deviations_source = deviation_source if deviation_source is not None \
+        self.deviations_sources = deviation_sources if deviation_sources is not None \
             else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
-        self.deviations_scale = deviations_scale if deviations_scale is not None \
+        self.is_deviation_mitigation = is_deviation_mitigation
+        self.deviation_mitigation_sources = self.get_deviation_mitigation_sources()
+        self.deviations_scale = deviation_scale if deviation_scale is not None \
             else [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
         self.iterations = iterations
         self.method = None
         self.additional_params = None
         self.model_real = None
         self.model_deviated = None
+        self.model_mitigated = None
+
+    def get_deviation_mitigation_sources(self) -> list:
+        if self.is_deviation_mitigation:
+            mitigation_sources = self.deviations_sources.copy()
+            if DeviationSource.TIMELINESS in mitigation_sources:
+                mitigation_sources.remove(DeviationSource.TIMELINESS)
+            return mitigation_sources
+        else:
+            return []
 
     def configure_model(self, method, **kwargs):
         self.method = method
         self.additional_params = kwargs
         self.model_real = self.create_model_real()
         self.model_deviated = self.create_model_deviated_set()
+        self.model_mitigated = self.create_model_mitigated_set()
         return self
-
-    def get_series_deviated(self, deviation_range: DeviationRange):
-        series_deviated = None
-        if deviation_range == DeviationRange.ALL:
-            series_deviated = self.stock.all_deviated_series
-        elif deviation_range == DeviationRange.PARTIAL:
-            series_deviated = self.stock.partially_deviated_series
-
-        return series_deviated
 
     def create_model_real(self):
         return self.method(prices=self.stock.real_series[self.column],
@@ -61,7 +66,11 @@ class PredictionModel:
 
     def create_model_deviated_set(self):
         return {deviation_source: self.create_model_deviated(deviation_source) for deviation_source in
-                self.deviations_source}
+                self.deviations_sources}
+
+    def create_model_mitigated_set(self):
+        return {deviation_source: self.create_model_mitigated(deviation_source) for deviation_source in
+                self.deviation_mitigation_sources}
 
     def create_model_deviated(self, source: DeviationSource):
         return {deviation_scale:
@@ -75,23 +84,46 @@ class PredictionModel:
                 deviation=source)
             for deviation_scale in self.deviations_scale}
 
+    def create_model_mitigated(self, source: DeviationSource):
+        return {deviation_scale:
+            self.method(
+                prices=self.stock.mitigated_deviations_series[source][deviation_scale][self.column],
+                real_prices=self.stock.real_series[self.column],
+                training_set_end=self.prediction_start,
+                prediction_delay=0,
+                column=self.column,
+                deviation=source)
+            for deviation_scale in self.deviations_scale}
+
+    def get_series_deviated(self, deviation_range: DeviationRange):
+        series_deviated = None
+        if deviation_range == DeviationRange.ALL:
+            series_deviated = self.stock.all_deviated_series
+        elif deviation_range == DeviationRange.PARTIAL:
+            series_deviated = self.stock.partially_deviated_series
+
+        return series_deviated
+
     def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None) -> None:
         model = self.model_real if source == DeviationSource.NONE else self.model_deviated[source][scale]
         extrapolation = model.extrapolate(self.additional_params)
         model.plot_extrapolation(extrapolation)
 
     def compute_statistics_set(self) -> None:
-        results = DataFrame(columns=[deviations_source_label, deviations_scale_label,
+        results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
                                      avg_time_label, std_dev_time_label,
                                      avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
 
-        result = self.compute_statistics(DeviationSource.NONE)
-        results = results.append(result, ignore_index=True)
+        real = self.compute_statistics(DeviationSource.NONE)
+        results = results.append(real, ignore_index=True)
 
-        for deviation_source in self.deviations_source:
-            for deviations_scale in self.deviations_scale:
-                result = self.compute_statistics(deviation_source, deviations_scale)
-                results = results.append(result, ignore_index=True)
+        for deviation_source in self.deviations_sources:
+            for deviation_scale in self.deviations_scale:
+                deviated = self.compute_statistics(deviation_source, deviation_scale, False)
+                results = pd.concat([results, pd.DataFrame([deviated])], ignore_index=True)
+                if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
+                    mitigated = self.compute_statistics(deviation_source, deviation_scale, True)
+                    results = pd.concat([results, pd.DataFrame([mitigated])], ignore_index=True)
 
         pd.set_option("display.precision", 2)
         print(
@@ -101,17 +133,24 @@ class PredictionModel:
                                formatters={"name": str.upper},
                                float_format="{:.2f}".format))
 
-    def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None) -> dict:
+    def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None,
+                           mitigation: bool = False) -> dict:
         results = []
+
         for j in range(self.iterations):
-            prediction_results = self.model_real.extrapolate_and_measure(self.additional_params) \
-                if source is DeviationSource.NONE \
-                else self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
+            prediction_results = None
+            if source is DeviationSource.NONE:
+                prediction_results = self.model_real.extrapolate_and_measure(self.additional_params)
+            elif not mitigation:
+                prediction_results = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
+            else:
+                prediction_results = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
             results.append(prediction_results)
 
         return {
             deviations_source_label: sources_short()[source],
             deviations_scale_label: scales_short()[scale],
+            deviations_mitigation_label: mitigation_short()[mitigation],
             avg_time_label: mean([r.elapsed_time for r in results]),
             std_dev_time_label: stdev([r.elapsed_time for r in results]),
             avg_rmse_label: mean([r.rmse for r in results]),

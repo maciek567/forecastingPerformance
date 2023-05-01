@@ -38,7 +38,7 @@ class HeinrichCorrectnessMetric:
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE)
         qualities = {scale: [] for scale in DeviationScale}
 
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             value = self.stock.real_series[column][i]
             for scale in DeviationScale:
                 qualities[scale].append(self.heinrich_values(deviated_series[scale][column][i], value, alpha[column]))
@@ -50,7 +50,7 @@ class HeinrichCorrectnessMetric:
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         qualities = {scale: [] for scale in DeviationScale}
 
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             real_tuple = self.stock.get_dict_for_tuple(self.stock.real_series, i)
             for scale in DeviationScale:
                 qualities[scale].append(self.heinrich_tuples(self.stock.get_dict_for_tuple(deviated_series[scale], i),
@@ -64,7 +64,7 @@ class HeinrichCorrectnessMetric:
         real_tuples = []
         deviated_tuples = {scale: [] for scale in DeviationScale}
 
-        for i in range(self.stock.time_series_end - self.stock.time_series_start):
+        for i in range(self.stock.data_size):
             real_tuples.append(self.stock.get_dict_for_tuple(self.stock.real_series, i))
             for scale in DeviationScale:
                 deviated_tuples[scale].append(self.stock.get_dict_for_tuple(deviated_series[scale], i))

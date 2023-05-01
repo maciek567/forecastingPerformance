@@ -29,10 +29,11 @@ class IncompleteSeries:
 
     def set_mitigated_incompleteness_series(self):
         self.model.mitigated_deviations_series[DeviationSource.INCOMPLETENESS] = \
-            {strength: {column: self.apply_interpolation(
-                self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column])
-                        for column in SeriesColumn}
-             for strength in DeviationScale}
+            {strength:
+                {column: self.apply_interpolation(
+                    self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column])
+                    for column in SeriesColumn}
+                for strength in DeviationScale}
 
     def nullify_all_series(self, incomplete_part: float) -> dict:
         return self.model.deviate_all_series(
@@ -49,10 +50,10 @@ class IncompleteSeries:
              incomplete_parts.items()})
 
     def add_incompleteness(self, data: Series, incomplete_part: float) -> Series:
-        incompleteness = np.random.choice([0, 1], self.model.time_series_end - self.model.time_series_start,
+        incompleteness = np.random.choice([0, 1], self.model.data_size,
                                           p=[incomplete_part, 1.0 - incomplete_part])
         incomplete_data = []
-        for i in range(0, self.model.time_series_end - self.model.time_series_start):
+        for i in range(self.model.data_size):
             if incompleteness[i] == 1:
                 incomplete_data.append(data[i])
             else:
