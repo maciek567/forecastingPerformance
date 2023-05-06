@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import Series
-
+from scipy import interpolate
 from timeseries.utils import DeviationScale, SeriesColumn, DeviationSource, Deviation
 
 
@@ -61,5 +61,8 @@ class IncompleteSeries:
         return Series(incomplete_data)
 
     @staticmethod
-    def apply_interpolation(series: Series):
-        return series.interpolate()
+    def apply_interpolation(series: Series) -> Series:
+        x = series.dropna().index
+        y = series.dropna()
+        cubic_interpolation = interpolate.interp1d(x, y, kind="cubic", fill_value="extrapolate")
+        return Series(cubic_interpolation(series.index))
