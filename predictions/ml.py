@@ -1,10 +1,9 @@
 import auto_esn.utils.dataset_loader as dl
 import numpy as np
-import pandas as pd
 import torch
 from auto_esn.esn.esn import DeepESN
 from numpy import ndarray
-from pandas import Series
+from pandas import Series, DataFrame
 from sklearn.model_selection import train_test_split
 from skopt import gp_minimize
 from skopt.space import Real, Integer
@@ -25,14 +24,15 @@ class Reservoir(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> Series:
-        mg17 = dl.loader_explicit(utils.normalize(self.data_to_learn_and_validate),
-                                  test_size=self.data_size - self.training_set_end)
-        x, x_test, y, y_test = mg17()
+    def extrapolate(self, params: dict) -> ndarray:
+        train = dl.loader_explicit(utils.normalize(self.data_to_learn, self.data_to_learn), test_size=0)
+        _, x_train, _, y_train = train()
+        test = dl.loader_explicit(utils.normalize(self.data_to_validate, self.data_to_learn), test_size=0)
+        _, x_test, _, y_test = test()
 
         esn = DeepESN(num_layers=2,
                       hidden_size=100)
-        esn.fit(x, y)
+        esn.fit(x_train, y_train)
 
         predictions = []
         for j in range(self.data_size - self.training_set_end):
@@ -40,8 +40,12 @@ class Reservoir(Prediction):
             predicted_value = esn(point_to_predict)
             predictions.append(predicted_value)
 
-        res = torch.vstack(predictions)
-        return utils.denormalize(res.numpy(), self.data_to_learn_and_validate)
+        result = [x[0] for x in torch.vstack(predictions).tolist()]
+        if len(self.data_to_learn) + len(result) < self.data_size:
+            self.data_size = len(self.data_to_learn) + len(result)
+            self.data_to_validate = self.data_to_validate[0:-2]
+
+        return utils.denormalize(np.array(result), self.data_to_learn)
 
     def plot_extrapolation(self, result) -> None:
         utils.plot_extrapolation(self, result, PredictionMethod.Reservoir)
@@ -83,7 +87,7 @@ class XGBoost(Prediction):
         return np.sum((real_y * 100 - predicted_y * 100) ** 2)
 
     def extrapolate(self, params: dict) -> ndarray:
-        indices = pd.DataFrame({'X': np.linspace(0, self.data_size, self.data_size)})
+        indices = DataFrame({'X': np.linspace(0, self.data_size, self.data_size)})
         x, x_test, y, y_test = train_test_split(indices, self.data_to_learn_and_validate.values,
                                                 test_size=self.data_size - self.training_set_end,
                                                 shuffle=False)

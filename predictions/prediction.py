@@ -1,6 +1,6 @@
 import time
 
-from pandas import Series
+from pandas import Series, concat
 
 from predictions import utils
 from timeseries.utils import DeviationSource, SeriesColumn
@@ -22,7 +22,7 @@ class Prediction:
         self.prediction_delay = prediction_delay
         self.prediction_start = self.training_set_end + prediction_delay
         self.data_to_validate = Series(real_prices.values[self.prediction_start:])
-        self.data_to_learn_and_validate = self.data_to_learn.append(self.data_to_validate)
+        self.data_to_learn_and_validate = concat([self.data_to_learn, self.data_to_validate])
         self.data_size = len(self.data_to_learn_and_validate)
         self.column = column
         self.deviation = deviation
@@ -32,9 +32,9 @@ class Prediction:
         extrapolation = extrapolation_method(params)
         elapsed_time_ms = (time.time_ns() - start_time) / 1e6
 
-        rmse = utils.calculate_rmse(self, extrapolation)
-        mae = utils.calculate_mae(self, extrapolation)
-        mape = utils.calculate_mape(self, extrapolation)
+        rmse = utils.calculate_rmse(self.data_to_validate.values, extrapolation)
+        mae = utils.calculate_mae(self.data_to_validate.values, extrapolation)
+        mape = utils.calculate_mape(self.data_to_validate.values, extrapolation)
         results = PredictionResults(elapsed_time_ms, rmse, mae, mape)
 
         return results

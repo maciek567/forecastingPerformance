@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import pandas as pd
 from pandas import Series
 
 from provider.provider import YFinanceProvider
@@ -34,7 +33,7 @@ class StockMarketSeries:
         return {column: self.create_single_series(column.value) for column in SeriesColumn}
 
     def create_single_series(self, column_name: SeriesColumn) -> Series:
-        series = pd.Series(list(self.data[column_name]), index=self.data["Date"])
+        series = Series(list(self.data[column_name]), index=self.data["Date"])
         return series[self.time_series_start:self.time_series_end]
 
     @staticmethod

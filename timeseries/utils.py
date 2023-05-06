@@ -69,7 +69,7 @@ def set_legend(ax):
 
 
 def save_image(plt, title):
-    matplotlib.rcParams["font.family"] = "serif"
+    matplotlib.rcParams["font.family"] = "sans-serif"
     matplotlib.rcParams["font.serif"] = "courier"
     matplotlib.rcParams["font.size"] = 11
 

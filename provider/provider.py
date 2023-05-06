@@ -1,8 +1,7 @@
 from datetime import datetime
 
-import pandas as pd
 import yfinance as yf
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 
 
 class YFinanceProvider:
@@ -20,7 +19,7 @@ class YFinanceProvider:
 
     @staticmethod
     def load_csv(name: str) -> DataFrame:
-        return pd.read_csv(YFinanceProvider.get_csv_path(name))
+        return read_csv(YFinanceProvider.get_csv_path(name))
 
     @staticmethod
     def get_csv_path(name: str) -> str:

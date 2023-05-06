@@ -1,7 +1,6 @@
 from enum import Enum
 
-import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from timeseries.utils import DeviationRange, DeviationSource, DeviationScale
 
@@ -35,7 +34,7 @@ def print_relation_results_to_latex(qualities: dict, source: DeviationSource, de
                   deviations_scale_label: scale.value,
                   deviations_range_label: deviated_range.value,
                   metric_score_label: qualities[scale]}
-        results = pd.concat([results, pd.DataFrame([result])], ignore_index=True)
+        results = concat([results, DataFrame([result])], ignore_index=True)
     print(results.to_latex(index=False,
                            formatters={"name": str.upper},
                            float_format="{:.3f}".format))

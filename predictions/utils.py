@@ -1,9 +1,7 @@
 from enum import Enum
 
-import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
-from numpy import ndarray
+from numpy import ndarray, sqrt, mean
 from pandas import Series, DataFrame
 
 
@@ -13,28 +11,25 @@ class PredictionMethod(Enum):
     Reservoir = "Reservoir computing"
 
 
-def calculate_rmse(model, result: ndarray) -> float:
-    actual = model.data_to_validate.values
-    return np.sqrt(np.mean((result - actual) ** 2))
+def calculate_rmse(actual: ndarray, result: ndarray) -> float:
+    return sqrt(mean((result - actual) ** 2))
 
 
-def calculate_mae(model, result: ndarray) -> float:
-    actual = model.data_to_validate.values
-    return np.mean(abs(result - actual)) * 1.0
+def calculate_mae(actual: ndarray, result: ndarray) -> float:
+    return mean(abs(result - actual)) * 1.0
 
 
-def calculate_mape(model, result: ndarray) -> float:
-    actual = model.data_to_validate.values
-    return np.mean(abs((result - actual) / actual)) * 100.0
+def calculate_mape(actual: ndarray, result: ndarray) -> float:
+    return mean(abs((result - actual) / actual)) * 100.0
 
 
-def normalize(series: Series) -> DataFrame:
-    df = pd.DataFrame((series - series.min()) / (series.max() - series.min()))
+def normalize(series: Series, original_series: Series) -> DataFrame:
+    df = DataFrame((series - original_series.min()) / (original_series.max() - original_series.min()))
     df.columns = ["y"]
     return df
 
 
-def denormalize(series: Series, original_series: Series) -> Series:
+def denormalize(series: ndarray, original_series: Series) -> ndarray:
     return series * (original_series.max() - original_series.min()) + original_series.min()
 
 

@@ -1,6 +1,5 @@
 import numpy as np
-import pandas as pd
-from pandas import Series
+from pandas import Series, DataFrame
 from pykalman import KalmanFilter
 
 from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, Deviation
@@ -57,7 +56,7 @@ class NoisedSeries:
 
     @staticmethod
     def apply_kalman(series: Series):
-        observations = pd.DataFrame(series)
+        observations = DataFrame(series)
         initial_value_guess = observations.iloc[0]
         observation_covariance = np.diag([0.5]) ** 2
 

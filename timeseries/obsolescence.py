@@ -1,6 +1,5 @@
 from datetime import date, datetime, timedelta
 
-import pandas as pd
 from pandas import Series
 
 from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource
@@ -27,7 +26,7 @@ class ObsolescenceSeries:
         return {column: self.single_series_with_extra_days(column.value, obsoleteness_scale) for column in SeriesColumn}
 
     def single_series_with_extra_days(self, column_name: SeriesColumn, extra_days: int) -> Series:
-        series = pd.Series(list(self.model.data[column_name]), index=self.model.data["Date"])
+        series = Series(list(self.model.data[column_name]), index=self.model.data["Date"])
         return series[self.model.time_series_start:self.model.time_series_end + extra_days]
 
     def get_ages(self, measurement_time: int = None) -> tuple:

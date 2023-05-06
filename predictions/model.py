@@ -1,7 +1,7 @@
 from statistics import mean, stdev
 
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, concat
 import warnings
 from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
 from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short
@@ -122,16 +122,17 @@ class PredictionModel:
             for deviation_scale in self.deviations_scale:
                 deviated = self.compute_statistics(deviation_source, deviation_scale, False)
                 if deviated:
-                    results = pd.concat([results, pd.DataFrame([deviated])], ignore_index=True)
+                    results = concat([results, DataFrame([deviated])], ignore_index=True)
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
                     mitigated = self.compute_statistics(deviation_source, deviation_scale, True)
                     if mitigated:
-                        results = pd.concat([results, pd.DataFrame([mitigated])], ignore_index=True)
+                        results = concat([results, DataFrame([mitigated])], ignore_index=True)
 
         pd.set_option("display.precision", 2)
         print(
             f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n")
         print(results)
+        print()
         print(results.to_latex(index=False,
                                formatters={"name": str.upper},
                                float_format="{:.2f}".format))
