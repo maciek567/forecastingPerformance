@@ -17,9 +17,9 @@ from utils import PredictionMethod
 
 
 class Reservoir(Prediction):
-    def __init__(self, prices: Series, real_prices: Series, training_set_end: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
+    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
@@ -52,9 +52,9 @@ class Reservoir(Prediction):
 
 
 class XGBoost(Prediction):
-    def __init__(self, prices: Series, real_prices: Series, training_set_end: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource):
-        super().__init__(prices, real_prices, training_set_end, prediction_delay, column, deviation)
+    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)

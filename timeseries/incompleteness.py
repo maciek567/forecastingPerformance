@@ -1,7 +1,7 @@
 import numpy as np
 from pandas import Series
 from scipy import interpolate
-from timeseries.utils import DeviationScale, SeriesColumn, DeviationSource, Deviation
+from timeseries.utils import DeviationScale, SeriesColumn, DeviationSource, Deviation, perform_mitigation
 
 
 class IncompleteSeries:
@@ -30,8 +30,9 @@ class IncompleteSeries:
     def set_mitigated_incompleteness_series(self):
         self.model.mitigated_deviations_series[DeviationSource.INCOMPLETENESS] = \
             {strength:
-                {column: self.apply_interpolation(
-                    self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column])
+                {column: perform_mitigation(
+                    self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column],
+                    self.apply_interpolation, multiple_runs=True)
                     for column in SeriesColumn}
                 for strength in DeviationScale}
 

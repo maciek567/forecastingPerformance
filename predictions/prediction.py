@@ -9,6 +9,7 @@ from timeseries.utils import DeviationSource, SeriesColumn
 class PredictionResults:
     def __init__(self, elapsed_time: float, rmse: float, mae: float, mape: float):
         self.elapsed_time = elapsed_time
+        self.mitigation_time = 0.0
         self.rmse = rmse
         self.mae = mae
         self.mape = mape
@@ -16,7 +17,7 @@ class PredictionResults:
 
 class Prediction:
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource):
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
         self.data_to_learn = prices[:prediction_border].dropna()
         self.training_set_end = len(self.data_to_learn)
         self.prediction_delay = prediction_delay
@@ -26,6 +27,7 @@ class Prediction:
         self.data_size = len(self.data_to_learn_and_validate)
         self.column = column
         self.deviation = deviation
+        self.mitigation_time = mitigation_time
 
     def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionResults:
         start_time = time.time_ns()

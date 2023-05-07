@@ -1,16 +1,18 @@
+import warnings
 from statistics import mean, stdev
 
 import pandas as pd
 from pandas import DataFrame, concat
-import warnings
+
 from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
-from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short
+from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"
 deviations_mitigation_label = "Mitigation"
 avg_time_label = "Time [ms]"
 std_dev_time_label = "Time SD"
+avg_mitigation_time_label = "M. time"
 avg_rmse_label = "RMSE"
 avg_mae_label = "MAE"
 avg_mape_label = "MAPE"
@@ -59,7 +61,7 @@ class PredictionModel:
     def create_model_real(self):
         return self.method(prices=self.stock.real_series[self.column],
                            real_prices=self.stock.real_series[self.column],
-                           training_set_end=self.prediction_start,
+                           prediction_border=self.prediction_start,
                            prediction_delay=0,
                            column=self.column,
                            deviation=DeviationSource.NONE)
@@ -78,7 +80,7 @@ class PredictionModel:
                 prices=self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
                 real_prices=self.stock.real_series[self.column] if source is not DeviationSource.TIMELINESS else
                 self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
-                training_set_end=self.prediction_start,
+                prediction_border=self.prediction_start,
                 prediction_delay=self.stock.obsolescence.obsolescence_scale[
                     deviation_scale] if source == DeviationSource.TIMELINESS else 0,
                 column=self.column,
@@ -88,9 +90,11 @@ class PredictionModel:
     def create_model_mitigated(self, source: DeviationSource):
         return {deviation_scale:
             self.method(
-                prices=self.stock.mitigated_deviations_series[source][deviation_scale][self.column],
+                prices=self.stock.mitigated_deviations_series[source][deviation_scale][self.column][Mitigation.DATA],
+                mitigation_time=self.stock.mitigated_deviations_series[source][deviation_scale][self.column][
+                    Mitigation.TIME],
                 real_prices=self.stock.real_series[self.column],
-                training_set_end=self.prediction_start,
+                prediction_border=self.prediction_start,
                 prediction_delay=0,
                 column=self.column,
                 deviation=source)
@@ -112,7 +116,7 @@ class PredictionModel:
 
     def compute_statistics_set(self) -> None:
         results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
-                                     avg_time_label, std_dev_time_label,
+                                     avg_time_label, std_dev_time_label, avg_mitigation_time_label,
                                      avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
 
         real = self.compute_statistics(DeviationSource.NONE)
@@ -120,11 +124,11 @@ class PredictionModel:
 
         for deviation_source in self.deviations_sources:
             for deviation_scale in self.deviations_scale:
-                deviated = self.compute_statistics(deviation_source, deviation_scale, False)
+                deviated = self.compute_statistics(deviation_source, deviation_scale, mitigation=False)
                 if deviated:
                     results = concat([results, DataFrame([deviated])], ignore_index=True)
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
-                    mitigated = self.compute_statistics(deviation_source, deviation_scale, True)
+                    mitigated = self.compute_statistics(deviation_source, deviation_scale, mitigation=True)
                     if mitigated:
                         results = concat([results, DataFrame([mitigated])], ignore_index=True)
 
@@ -150,6 +154,7 @@ class PredictionModel:
                     result = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
                 else:
                     result = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
+                    result.mitigation_time = self.model_mitigated[source][scale].mitigation_time
                 results.append(result)
             except Exception as e:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
@@ -162,6 +167,7 @@ class PredictionModel:
                 deviations_mitigation_label: mitigation_short()[mitigation],
                 avg_time_label: mean([r.elapsed_time for r in results]),
                 std_dev_time_label: stdev([r.elapsed_time for r in results]),
+                avg_mitigation_time_label: mean([r.mitigation_time for r in results]),
                 avg_rmse_label: mean([r.rmse for r in results]),
                 avg_mae_label: mean([r.mae for r in results]),
                 avg_mape_label: mean(r.mape for r in results),

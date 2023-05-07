@@ -2,7 +2,7 @@ import numpy as np
 from pandas import Series, DataFrame
 from pykalman import KalmanFilter
 
-from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, Deviation
+from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource, Deviation, perform_mitigation
 
 
 class NoisedSeries:
@@ -31,9 +31,10 @@ class NoisedSeries:
     def set_mitigated_noises_series(self):
         self.model.mitigated_deviations_series[DeviationSource.NOISE] = \
             {strength: {
-                column: self.apply_kalman(self.model.all_deviated_series[DeviationSource.NOISE][strength][column])
+                column: perform_mitigation(self.model.all_deviated_series[DeviationSource.NOISE][strength][column],
+                                           self.apply_kalman)
                 for column in SeriesColumn}
-             for strength in DeviationScale}
+                for strength in DeviationScale}
 
     def noise_all_series(self, power: float) -> dict:
         return self.model.deviate_all_series(
@@ -69,4 +70,3 @@ class NoisedSeries:
         )
         smoothed_series = kf.smooth(observations)[0]
         return Series([value[0] for value in smoothed_series.tolist()])
-
