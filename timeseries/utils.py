@@ -1,9 +1,6 @@
-import os
 import time
 from enum import Enum
 
-import matplotlib
-import matplotlib.font_manager
 from pandas import Series
 
 
@@ -83,23 +80,3 @@ def perform_mitigation(series: Series, mitigation_method, multiple_runs: bool = 
         elapsed_time_ms = (time.time_ns() - start_time) / 1e6 / 100
 
     return {Mitigation.DATA: mitigated_series, Mitigation.TIME: elapsed_time_ms}
-
-
-def set_legend(ax):
-    legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.2))
-    legend.get_frame().set_alpha(0.5)
-
-
-def save_image(plt, title):
-    matplotlib.rcParams["font.family"] = "sans-serif"
-    matplotlib.rcParams["font.serif"] = "courier"
-    matplotlib.rcParams["font.size"] = 11
-
-    path = os.path.join('..', 'data', 'graphs', title.replace(' ', '_').replace(',', ''))
-    plt.savefig(f"{path}.pdf", bbox_inches='tight')
-
-
-def set_ticks_size(ax, axis, size):
-    ax[0].tick_params(axis=axis, labelsize=size)
-    ax[1].tick_params(axis=axis, labelsize=size)
-    ax[2].tick_params(axis=axis, labelsize=size)

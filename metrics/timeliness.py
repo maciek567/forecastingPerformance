@@ -3,7 +3,8 @@ import math
 from matplotlib import pyplot as plt
 
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import DeviationScale, SeriesColumn, set_ticks_size, save_image
+from timeseries.utils import DeviationScale, SeriesColumn
+from util.graphs import save_image, set_ticks_size
 
 
 class HeinrichTimelinessMetric:

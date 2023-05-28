@@ -5,7 +5,8 @@ from provider.provider import YFinanceProvider
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
-from timeseries.utils import SeriesColumn, DeviationSource, DeviationRange, DeviationScale, save_image, set_legend
+from timeseries.utils import SeriesColumn, DeviationSource, DeviationRange
+from util.graphs import save_image, set_legend, TIME_DAYS_LABEL, PRICE_USD_LABEL
 
 
 class StockMarketSeries:
@@ -66,8 +67,8 @@ class StockMarketSeries:
             ax.plot(series.values, markersize=1.0, label=label)
         title = f"{self.company_name} {title}"
         ax.set_title(title)
-        ax.set_xlabel("Time [days]")
-        ax.set_ylabel("Prices [USD]")
+        ax.set_xlabel(TIME_DAYS_LABEL)
+        ax.set_ylabel(PRICE_USD_LABEL)
         set_legend(ax)
         save_image(plt, title)
         plt.show()

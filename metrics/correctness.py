@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DeviationRange, DeviationSource, DeviationScale, save_image, \
-    set_legend
+from timeseries.utils import SeriesColumn, DeviationRange, DeviationSource, DeviationScale
+from util.graphs import save_image, set_legend, TIME_DAYS_LABEL
 
 
 class HeinrichCorrectnessMetric:
@@ -92,7 +92,7 @@ class HeinrichCorrectnessMetric:
         sensitiveness = ", sensitiveness" if is_alpha else ""
         title = f"Heinrich metric {column} prices [{level.value}, {noise} noised{sensitiveness}]"
         ax.set_title(title)
-        ax.set_xlabel("Time [days]")
+        ax.set_xlabel(TIME_DAYS_LABEL)
         ax.set_ylabel("Quality")
         set_legend(ax)
         save_image(plt, title)

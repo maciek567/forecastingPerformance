@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from numpy import ndarray, sqrt, mean
 from pandas import Series, DataFrame
 
+from util.graphs import TIME_DAYS_LABEL, PRICE_USD_LABEL
+
 
 class PredictionMethod(Enum):
     Arima = "Arima"
@@ -35,11 +37,10 @@ def denormalize(series: ndarray, original_series: Series) -> ndarray:
 
 def plot_extrapolation(model, result: ndarray, method: PredictionMethod) -> None:
     plt.plot(model.data_to_learn_and_validate.values, "r", label="Actual data")
-    plt.plot(range(model.prediction_start, model.data_size), result, "b",
-             label="Prediction")
+    plt.plot(range(model.prediction_start, model.data_size), result, "b", label="Prediction")
     plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
     plt.title(f"{method.value} extrapolation [{model.column.value} prices, {model.deviation.value}]")
-    plt.xlabel("Time [days]")
-    plt.ylabel("Prices [USD]")
+    plt.xlabel(TIME_DAYS_LABEL)
+    plt.ylabel(PRICE_USD_LABEL)
     plt.legend()
     plt.show()

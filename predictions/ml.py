@@ -13,7 +13,7 @@ from xgboost import XGBRegressor
 from predictions import utils
 from predictions.prediction import Prediction, PredictionResults
 from timeseries.utils import SeriesColumn, DeviationSource
-from utils import PredictionMethod
+from predictions.utils import PredictionMethod
 
 
 class Reservoir(Prediction):

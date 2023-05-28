@@ -4,8 +4,8 @@ from statistics import mean, stdev
 import pandas as pd
 from pandas import DataFrame, concat
 
-from timeseries.timeseries import StockMarketSeries, DeviationScale, DeviationRange, DeviationSource
-from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation
+from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
+from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"

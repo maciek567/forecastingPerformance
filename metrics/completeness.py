@@ -3,7 +3,8 @@ import numpy as np
 
 from metrics.utils import MetricLevel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DeviationRange, DeviationScale, DeviationSource, save_image, set_ticks_size
+from timeseries.utils import SeriesColumn, DeviationRange, DeviationScale, DeviationSource
+from util.graphs import save_image, set_ticks_size, TIME_DAYS_LABEL
 
 
 class BlakeCompletenessMetric:
@@ -73,7 +74,7 @@ class BlakeCompletenessMetric:
                         f" {self.incompleteness_label(DeviationScale.MODERATELY, incompleteness_range)}", size=10)
         ax[2].set_title(f"Highly incomplete probability:"
                         f" {self.incompleteness_label(DeviationScale.HIGHLY, incompleteness_range)}", size=10)
-        ax[2].set_xlabel("Time [days]", size=10)
+        ax[2].set_xlabel(TIME_DAYS_LABEL, size=10)
         ax[1].set_ylabel("Incompleteness metric value", size=10)
         set_ticks_size(ax, "x", 9)
         fig.tight_layout(pad=1.0)
