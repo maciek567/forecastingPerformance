@@ -1,3 +1,4 @@
+import os
 import warnings
 from statistics import mean, stdev
 
@@ -114,7 +115,7 @@ class PredictionModel:
         extrapolation = model.extrapolate(self.additional_params)
         model.plot_extrapolation(extrapolation)
 
-    def compute_statistics_set(self) -> None:
+    def compute_statistics_set(self, save_to_file=False) -> None:
         results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
                                      avg_time_label, std_dev_time_label, avg_mitigation_time_label,
                                      avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
@@ -132,14 +133,7 @@ class PredictionModel:
                     if mitigated:
                         results = concat([results, DataFrame([mitigated])], ignore_index=True)
 
-        pd.set_option("display.precision", 2)
-        print(
-            f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n")
-        print(results)
-        print()
-        print(results.to_latex(index=False,
-                               formatters={"name": str.upper},
-                               float_format="{:.2f}".format))
+        self.manage_output(results, save_to_file)
 
     def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None,
                            mitigation: bool = False) -> dict:
@@ -173,3 +167,26 @@ class PredictionModel:
                 avg_mape_label: mean(r.mape for r in results),
                 std_dev_mape_label: stdev([r.mape for r in results])}
         return dict_result
+
+    def manage_output(self, results: DataFrame, save_to_file: bool) -> None:
+        pd.set_option("display.precision", 2)
+        header = \
+            f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n"
+        text = results.to_string()
+        latex = results.to_latex(index=False,
+                                 formatters={"name": str.upper},
+                                 float_format="{:.2f}".format)
+        if not save_to_file:
+            print(header + "\n" + text + "\n\n" + latex)
+        else:
+            base_path = "../data/predictions"
+            os.makedirs(base_path, exist_ok=True)
+            path = f"{base_path}/{self.stock.company_name}_{self.column.value}_{self.method_name(self.method)}_{self.stock.time_series_start}"
+            results.to_csv(path + ".csv")
+
+            latex_file = open(path + ".tex", "w")
+            latex_file.write(latex)
+            latex_file.close()
+
+    def method_name(self, method) -> str:
+        return str(self.method)[str(self.method).index(".") + 1: -2]
