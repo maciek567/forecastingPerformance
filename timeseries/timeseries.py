@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from pandas import Series
 
 from provider.provider import YFinanceProvider
@@ -6,7 +5,6 @@ from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
 from timeseries.utils import SeriesColumn, DeviationSource, DeviationRange
-from util.graphs import save_image, set_legend, TIME_DAYS_LABEL, PRICE_USD_LABEL
 
 
 class StockMarketSeries:
@@ -59,16 +57,3 @@ class StockMarketSeries:
                 for column in SeriesColumn} | \
             {column: deviation.method(self.real_series[column], deviation.scale)
              for column, deviation in series_to_deviate.items()}
-
-    def plot_series(self, title: str, **kwargs) -> None:
-        fig = plt.figure(figsize=(10, 4))
-        ax = fig.add_subplot(111, axisbelow=True)
-        for label, series in (kwargs.items()):
-            ax.plot(series.values, markersize=1.0, label=label)
-        title = f"{self.company_name} {title}"
-        ax.set_title(title)
-        ax.set_xlabel(TIME_DAYS_LABEL)
-        ax.set_ylabel(PRICE_USD_LABEL)
-        set_legend(ax)
-        save_image(plt, title)
-        plt.show()

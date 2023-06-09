@@ -1,9 +1,7 @@
-import matplotlib.pyplot as plt
 from numpy import ndarray
 from pandas import Series
 from pmdarima import auto_arima
 from pmdarima.arima import ndiffs
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
 
 from predictions import utils
@@ -20,19 +18,6 @@ class ArimaPrediction(Prediction):
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
         print(f"Execution time: {elapsed_time} [ms]")
-
-    def plot_returns(self):
-        plt.figure(figsize=(10, 4))
-        plt.plot(self.data_to_learn_and_validate)
-        plt.ylabel('Return', fontsize=20)
-
-    def plot_pacf(self):
-        plot_pacf(self.data_to_learn)
-        plt.show()
-
-    def plot_acf(self):
-        plot_acf(self.data_to_learn)
-        plt.show()
 
     def plot_extrapolation(self, prediction):
         utils.plot_extrapolation(self, prediction, PredictionMethod.Arima)
