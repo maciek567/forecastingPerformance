@@ -17,7 +17,7 @@ class DeviationSource(Enum):
     NONE = "no deviations"
     NOISE = "noise"
     INCOMPLETENESS = "incompleteness"
-    TIMELINESS = "obsolescence"
+    TIMELINESS = "timeliness"
 
 
 def sources_short():

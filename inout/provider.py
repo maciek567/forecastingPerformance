@@ -3,6 +3,8 @@ from datetime import datetime
 import yfinance as yf
 from pandas import DataFrame, read_csv
 
+stock_path = "../data/timeseries/stock/"
+
 
 class YFinanceProvider:
 
@@ -23,7 +25,6 @@ class YFinanceProvider:
 
     @staticmethod
     def get_csv_path(name: str) -> str:
-        stock_path = "../data/timeseries/stock/"
         return stock_path + name + ".csv"
 
     @staticmethod

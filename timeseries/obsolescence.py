@@ -23,7 +23,7 @@ class ObsolescenceSeries:
             {strength: self.obsolete_all_series(self.obsolescence_scale[strength]) for strength in DeviationScale}
 
     def obsolete_all_series(self, obsoleteness_scale: int) -> dict:
-        return {column: self.single_series_with_extra_days(column.value, obsoleteness_scale) for column in SeriesColumn}
+        return {column: self.single_series_with_extra_days(column.value, obsoleteness_scale) for column in self.model.columns}
 
     def single_series_with_extra_days(self, column_name: SeriesColumn, extra_days: int) -> Series:
         series = Series(list(self.model.data[column_name]), index=self.model.data["Date"])

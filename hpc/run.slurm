@@ -5,4 +5,4 @@
 #SBATCH --partition=plgrid
  
 module load python
-srun python ../predictions/run.py
+srun python run_predictions.py
