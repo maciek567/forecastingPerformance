@@ -69,4 +69,4 @@ class NoisedSeries:
             transition_covariance=transition_covariance,
         )
         smoothed_series = kf.smooth(observations)[0]
-        return Series([value[0] for value in smoothed_series.tolist()])
+        return Series([value[0] for value in smoothed_series.tolist()], index=observations.index.tolist())

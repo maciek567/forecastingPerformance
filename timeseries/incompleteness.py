@@ -59,11 +59,12 @@ class IncompleteSeries:
                 incomplete_data.append(data[i])
             else:
                 incomplete_data.append(np.nan)
-        return Series(incomplete_data)
+        return Series(incomplete_data, index=data.index.tolist())
 
     @staticmethod
     def apply_interpolation(series: Series) -> Series:
-        x = series.dropna().index
-        y = series.dropna()
+        series_values = Series(series.values)
+        x = series_values.dropna().index
+        y = series_values.dropna()
         cubic_interpolation = interpolate.interp1d(x, y, kind="cubic", fill_value="extrapolate")
-        return Series(cubic_interpolation(series.index))
+        return Series(cubic_interpolation(series_values.index), index=series.index.tolist())

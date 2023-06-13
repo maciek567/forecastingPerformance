@@ -3,10 +3,9 @@ import sys
 import warnings
 from statistics import mean, stdev
 
-import pandas as pd
-from pandas import DataFrame, concat
-
-sys.path.append('..')
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.types import StructType,StructField, StringType
+sys.path.append('../..')
 from hpc.shared import obsolescence_scale
 from inout.intermediate import IntermediateProvider
 from timeseries.timeseries import DeviationRange, DeviationSource
@@ -42,10 +41,11 @@ class PredictionModelHPC:
         self.iterations = iterations
         self.method = None
         self.additional_params = None
-        self.provider = IntermediateProvider()
+        self.spark = self.start_spark()
+        self.provider = IntermediateProvider(self.spark)
         self.series_real = self.provider.load_csv(f"{self.company_name}_{self.column.value}_real")
-        self.series_deviated = self.provider.load_all(False, self.deviations_sources, self.deviations_scale)
-        self.series_mitigated = self.provider.load_all(True, self.deviations_sources, self.deviations_scale)
+        self.series_deviated = self.provider.load_set(False, self.deviations_sources, self.deviations_scale)
+        self.series_mitigated = self.provider.load_set(True, self.deviations_sources, self.deviations_scale)
         self.model_real = None
         self.model_deviated = None
         self.model_mitigated = None
@@ -66,6 +66,10 @@ class PredictionModelHPC:
         self.model_deviated = self.create_model_deviated_set()
         self.model_mitigated = self.create_model_mitigated_set()
         return self
+
+    @staticmethod
+    def start_spark():
+        return SparkSession.builder.appName("Predictions").getOrCreate()
 
     def create_model_real(self):
         return self.method(prices=self.series_real,
@@ -113,9 +117,20 @@ class PredictionModelHPC:
         model.plot_extrapolation(extrapolation)
 
     def compute_statistics_set(self, save_to_file=False) -> None:
-        results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
-                                     avg_time_label, std_dev_time_label, avg_mitigation_time_label,
-                                     avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
+        empty_rdd = self.spark.sparkContext.emptyRDD()
+        schema = StructType([
+            StructField(deviations_source_label, StringType(), True),
+            StructField(deviations_scale_label, StringType(), True),
+            StructField(deviations_mitigation_label, StringType(), True),
+            StructField(avg_time_label, StringType(), True),
+            StructField(std_dev_time_label, StringType(), True),
+            StructField(avg_mitigation_time_label, StringType(), True),
+            StructField(avg_rmse_label, StringType(), True),
+            StructField(avg_mae_label, StringType(), True),
+            StructField(avg_mape_label, StringType(), True),
+            StructField(std_dev_mape_label, StringType(), True)
+            ])
+        results = self.spark.createDataFrame(empty_rdd, schema)
 
         real = self.compute_statistics(DeviationSource.NONE)
         results = results.append(real, ignore_index=True)
@@ -124,11 +139,11 @@ class PredictionModelHPC:
             for deviation_scale in self.deviations_scale:
                 deviated = self.compute_statistics(deviation_source, deviation_scale, mitigation=False)
                 if deviated:
-                    results = concat([results, DataFrame([deviated])], ignore_index=True)
+                    results = results.union(deviated)
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
                     mitigated = self.compute_statistics(deviation_source, deviation_scale, mitigation=True)
                     if mitigated:
-                        results = concat([results, DataFrame([mitigated])], ignore_index=True)
+                        results = results.union(mitigated)
 
         self.manage_output(results, save_to_file)
 
@@ -166,17 +181,15 @@ class PredictionModelHPC:
         return dict_result
 
     def manage_output(self, results: DataFrame, save_to_file: bool) -> None:
-        pd.set_option("display.precision", 2)
         header = \
             f"Statistics [{self.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n"
         text = results.to_string()
         latex = results.to_latex(index=False,
-                                 formatters={"name": str.upper},
                                  float_format="{:.2f}".format)
         if not save_to_file:
             print(header + "\n" + text + "\n\n" + latex)
         else:
-            base_path = "../data/predictions"
+            base_path = "../../data/predictions"
             os.makedirs(base_path, exist_ok=True)
             path = f"{base_path}/{self.company_name}_{self.column.value}_{self.method_name(self.method)}"
             results.to_csv(path + ".csv")

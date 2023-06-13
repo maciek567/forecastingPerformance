@@ -1,7 +1,8 @@
 import glob
 import os
 
-from pandas import Series, DataFrame, read_csv
+from pandas import Series
+from pyspark.sql import DataFrame
 
 from timeseries.utils import DeviationScale, DeviationSource, SeriesColumn, Mitigation
 
@@ -10,16 +11,15 @@ processed_path = "../data/processed/"
 
 class IntermediateProvider:
 
-    @staticmethod
-    def save_as_csv(series: Series, name: str):
-        series.to_csv(IntermediateProvider.get_csv_path(name))
+    def __init__(self, spark=None):
+        self.spark = spark
 
     @staticmethod
-    def load_csv(name: str) -> DataFrame:
-        series = read_csv(IntermediateProvider.get_csv_path(name))
-        series.index = series["Date"]
-        series = series.drop("Date", axis=1)
-        return series
+    def save_as_csv(series: Series, name: str):
+        series.to_csv(IntermediateProvider.get_csv_path(name), index_label=["Date"], header=["Values"])
+
+    def load_csv(self, name: str) -> DataFrame:
+        return self.spark.read.option("header", "true").csv(IntermediateProvider.get_csv_path(name))
 
     @staticmethod
     def get_csv_path(name: str) -> str:
@@ -31,20 +31,18 @@ class IntermediateProvider:
         for f in files:
             os.remove(f)
 
-    @staticmethod
-    def load_all(is_mitigated: bool, sources: list, scales: list):
-        series_set = {deviation: {scale: {attribute: None for attribute in SeriesColumn} for scale in scales} for deviation in sources}
+    def load_set(self, is_mitigated: bool, sources: list, scales: list) -> dict:
+        series_set = {deviation: {scale: {attribute: None for attribute in SeriesColumn} for scale in scales} for
+                      deviation in sources}
         for file in os.listdir(processed_path):
             name = file.strip(".csv")
             parts = name.split("_")
-            series = read_csv(processed_path + file)
-            if 'Date' in series.columns:
-                series.index = series["Date"]
-                series = series.drop("Date", axis=1)
+            series = self.spark.read.option("header", "true").csv(processed_path + file)
             if not is_mitigated and parts[-1] == "deviated":
                 series_set[DeviationSource[parts[1]]][DeviationScale[parts[2]]][SeriesColumn[parts[3]]] = series
             elif is_mitigated and parts[-1] == "mitigated":
-                mitigation = series_set[DeviationSource[parts[1]]][DeviationScale[parts[2]]][SeriesColumn[parts[3]]] = {}
+                mitigation = series_set[DeviationSource[parts[1]]][DeviationScale[parts[2]]][
+                    SeriesColumn[parts[3]]] = {}
                 mitigation[Mitigation.DATA] = series
                 mitigation[Mitigation.TIME] = float(parts[4])
 
