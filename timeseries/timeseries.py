@@ -5,7 +5,7 @@ from inout.provider import YFinanceProvider
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
-from timeseries.utils import SeriesColumn, DeviationSource, DeviationRange, Mitigation
+from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, Mitigation
 
 
 class StockMarketSeries:

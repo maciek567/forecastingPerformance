@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from metrics.utils import MetricLevel
+from timeseries.enums import SeriesColumn, DeviationRange, DeviationScale, DeviationSource
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn, DeviationRange, DeviationScale, DeviationSource
 from util.graphs import save_image, set_ticks_size, TIME_DAYS_LABEL
 
 

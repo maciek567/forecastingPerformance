@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 
 from pandas import Series
 
-from timeseries.utils import SeriesColumn, DeviationScale, DeviationSource
+from timeseries.enums import SeriesColumn, DeviationScale, DeviationSource
 
 DAYS_IN_YEAR = 365
 

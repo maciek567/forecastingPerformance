@@ -7,7 +7,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from predictions import utils
 from predictions.prediction import Prediction, PredictionResults
 from predictions.utils import PredictionMethod
-from timeseries.utils import SeriesColumn, DeviationSource
+from timeseries.enums import SeriesColumn, DeviationSource
 
 
 class ArimaPrediction(Prediction):

@@ -5,4 +5,5 @@
 #SBATCH --partition=plgrid
  
 module load python
+module load plgrid/apps/spark
 srun python run_predictions.py

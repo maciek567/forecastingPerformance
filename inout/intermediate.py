@@ -4,7 +4,8 @@ import os
 from pandas import Series
 from pyspark.sql import DataFrame
 
-from timeseries.utils import DeviationScale, DeviationSource, SeriesColumn, Mitigation
+from timeseries.enums import DeviationScale, DeviationSource, SeriesColumn
+from timeseries.utils import Mitigation
 
 processed_path = "../data/processed/"
 
@@ -19,7 +20,9 @@ class IntermediateProvider:
         series.to_csv(IntermediateProvider.get_csv_path(name), index_label=["Date"], header=["Values"])
 
     def load_csv(self, name: str) -> DataFrame:
-        return self.spark.read.option("header", "true").csv(IntermediateProvider.get_csv_path(name))
+        df = self.spark.read.option("header", "true").csv(IntermediateProvider.get_csv_path(name))
+        df = df.withColumn("Values", df.Values.cast("float"))
+        return df
 
     @staticmethod
     def get_csv_path(name: str) -> str:
@@ -38,6 +41,7 @@ class IntermediateProvider:
             name = file.strip(".csv")
             parts = name.split("_")
             series = self.spark.read.option("header", "true").csv(processed_path + file)
+            series = series.withColumn("Values", series.Values.cast("float"))
             if not is_mitigated and parts[-1] == "deviated":
                 series_set[DeviationSource[parts[1]]][DeviationScale[parts[2]]][SeriesColumn[parts[3]]] = series
             elif is_mitigated and parts[-1] == "mitigated":

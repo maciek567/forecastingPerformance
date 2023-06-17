@@ -1,7 +1,9 @@
 import numpy as np
 from pandas import Series
 from scipy import interpolate
-from timeseries.utils import DeviationScale, DeviationSource, Deviation, perform_mitigation
+
+from timeseries.enums import DeviationScale, DeviationSource, Deviation
+from timeseries.utils import perform_mitigation
 
 
 class IncompleteSeries:

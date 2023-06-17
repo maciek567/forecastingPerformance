@@ -2,7 +2,7 @@ from enum import Enum
 
 from pandas import DataFrame, concat
 
-from timeseries.utils import DeviationRange, DeviationSource, DeviationScale
+from timeseries.enums import DeviationRange, DeviationSource, DeviationScale
 
 
 class MetricLevel(Enum):

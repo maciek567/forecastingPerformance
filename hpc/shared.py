@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append('..')
-from timeseries.utils import DeviationScale, SeriesColumn
+from timeseries.enums import DeviationScale, SeriesColumn
 
 company_name = "Intel"
 column = SeriesColumn.CLOSE

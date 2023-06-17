@@ -3,13 +3,14 @@ import sys
 import warnings
 from statistics import mean, stdev
 
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType,StructField, StringType
+from pyspark.pandas import DataFrame
+from pyspark.sql import SparkSession
+
 sys.path.append('../..')
 from hpc.shared import obsolescence_scale
 from inout.intermediate import IntermediateProvider
 from timeseries.timeseries import DeviationRange, DeviationSource
-from timeseries.utils import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
+from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"
@@ -77,7 +78,8 @@ class PredictionModelHPC:
                            prediction_border=self.prediction_start,
                            prediction_delay=0,
                            column=self.column,
-                           deviation=DeviationSource.NONE)
+                           deviation=DeviationSource.NONE,
+                           spark=self.spark)
 
     def create_model_deviated_set(self):
         return {deviation_source: self.create_model_deviated(deviation_source) for deviation_source in
@@ -96,7 +98,8 @@ class PredictionModelHPC:
                 prediction_border=self.prediction_start,
                 prediction_delay=obsolescence_scale[scale] if source == DeviationSource.TIMELINESS else 0,
                 column=self.column,
-                deviation=source)
+                deviation=source,
+                spark=self.spark)
             for scale in self.deviations_scale}
 
     def create_model_mitigated(self, source: DeviationSource):
@@ -108,7 +111,8 @@ class PredictionModelHPC:
                 prediction_border=self.prediction_start,
                 prediction_delay=0,
                 column=self.column,
-                deviation=source)
+                deviation=source,
+                spark=self.spark)
             for scale in self.deviations_scale}
 
     def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None) -> None:
@@ -117,33 +121,21 @@ class PredictionModelHPC:
         model.plot_extrapolation(extrapolation)
 
     def compute_statistics_set(self, save_to_file=False) -> None:
-        empty_rdd = self.spark.sparkContext.emptyRDD()
-        schema = StructType([
-            StructField(deviations_source_label, StringType(), True),
-            StructField(deviations_scale_label, StringType(), True),
-            StructField(deviations_mitigation_label, StringType(), True),
-            StructField(avg_time_label, StringType(), True),
-            StructField(std_dev_time_label, StringType(), True),
-            StructField(avg_mitigation_time_label, StringType(), True),
-            StructField(avg_rmse_label, StringType(), True),
-            StructField(avg_mae_label, StringType(), True),
-            StructField(avg_mape_label, StringType(), True),
-            StructField(std_dev_mape_label, StringType(), True)
-            ])
-        results = self.spark.createDataFrame(empty_rdd, schema)
-
+        columns = [deviations_source_label, deviations_scale_label, deviations_mitigation_label,
+                   avg_time_label, std_dev_time_label, avg_mitigation_time_label, avg_rmse_label,
+                   avg_mae_label, avg_mape_label, std_dev_mape_label]
         real = self.compute_statistics(DeviationSource.NONE)
-        results = results.append(real, ignore_index=True)
+        results = DataFrame(data=[real], columns=columns)
 
         for deviation_source in self.deviations_sources:
             for deviation_scale in self.deviations_scale:
                 deviated = self.compute_statistics(deviation_source, deviation_scale, mitigation=False)
                 if deviated:
-                    results = results.union(deviated)
+                    results = results.append(DataFrame(data=[deviated], columns=columns))
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
                     mitigated = self.compute_statistics(deviation_source, deviation_scale, mitigation=True)
                     if mitigated:
-                        results = results.union(mitigated)
+                        results = results.append(DataFrame(data=[mitigated], columns=columns))
 
         self.manage_output(results, save_to_file)
 

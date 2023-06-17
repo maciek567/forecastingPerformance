@@ -4,7 +4,7 @@ from shared import obsolescence_scale, company_name
 
 sys.path.append('..')
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import SeriesColumn
+from timeseries.enums import SeriesColumn
 
 time_series_start = "2017-01-03"
 time_series_values = 300

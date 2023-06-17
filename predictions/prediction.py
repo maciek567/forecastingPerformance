@@ -3,7 +3,7 @@ import time
 from pandas import Series, concat
 
 from predictions import utils
-from timeseries.utils import DeviationSource, SeriesColumn
+from timeseries.enums import DeviationSource, SeriesColumn
 
 
 class PredictionResults:

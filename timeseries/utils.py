@@ -1,70 +1,8 @@
 import time
-from enum import Enum
 
 from pandas import Series
 
-
-class SeriesColumn(Enum):
-    OPEN = "open"
-    CLOSE = "close"
-    ADJ_CLOSE = "adj_close"
-    HIGH = "high"
-    LOW = "low"
-    VOLUME = "volume"
-
-
-class DeviationSource(Enum):
-    NONE = "no deviations"
-    NOISE = "noise"
-    INCOMPLETENESS = "incompleteness"
-    TIMELINESS = "timeliness"
-
-
-def sources_short():
-    return {
-        DeviationSource.NONE: "-",
-        DeviationSource.NOISE: "N",
-        DeviationSource.INCOMPLETENESS: "I",
-        DeviationSource.TIMELINESS: "T"
-    }
-
-
-class DeviationScale(Enum):
-    SLIGHTLY = "slightly"
-    MODERATELY = "moderately"
-    HIGHLY = "highly"
-
-
-def scales_short():
-    return {
-        None: "-",
-        DeviationScale.SLIGHTLY: "S",
-        DeviationScale.MODERATELY: "M",
-        DeviationScale.HIGHLY: "H",
-    }
-
-
-def mitigation_short():
-    return {
-        True: "Y",
-        False: "N"
-    }
-
-
-class DeviationRange(Enum):
-    ALL = "all"
-    PARTIAL = "partially"
-
-
-class Deviation:
-    def __init__(self, method, scale):
-        self.method = method
-        self.scale = scale
-
-
-class Mitigation(Enum):
-    DATA = "data"
-    TIME = "time"
+from timeseries.enums import Mitigation
 
 
 def perform_mitigation(series: Series, mitigation_method, multiple_runs: bool = False) -> dict:

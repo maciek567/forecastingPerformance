@@ -2,8 +2,8 @@ import math
 
 from matplotlib import pyplot as plt
 
+from timeseries.enums import DeviationScale, SeriesColumn
 from timeseries.timeseries import StockMarketSeries
-from timeseries.utils import DeviationScale, SeriesColumn
 from util.graphs import save_image, set_ticks_size
 
 
