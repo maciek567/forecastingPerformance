@@ -1,12 +1,15 @@
 from numpy import ndarray
+from pandas import DataFrame
 from pandas import Series
 from pmdarima import auto_arima
 from pmdarima.arima import ndiffs
+from statsforecast.core import StatsForecast
+from statsforecast.models import AutoARIMA
 from statsmodels.tsa.arima.model import ARIMA
 
-from predictions import utils
-from predictions.prediction import Prediction, PredictionResults
-from predictions.utils import PredictionMethod
+from predictions.normal import utils
+from predictions.normal.prediction import Prediction, PredictionResults
+from predictions.normal.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -48,7 +51,7 @@ class ManualArima(ArimaPrediction):
         return extrapolation
 
 
-class AutoArima(ArimaPrediction):
+class AutoArimaPMD(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
                  column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
@@ -68,3 +71,25 @@ class AutoArima(ArimaPrediction):
 
     def print_summary(self):
         print(self.auto_arima_model.summary())
+
+
+class AutoArimaSF(ArimaPrediction):
+    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
+        self.auto_arima_model = None
+
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
+        return super().execute_and_measure(self.extrapolate, params)
+
+    def extrapolate(self, params: dict) -> ndarray:
+        series_id = [0 for i in range(0, self.training_set_end)]
+        series = DataFrame({"ds": self.data_to_learn.keys(), "y": self.data_to_learn.values, "unique_id": series_id})
+
+        sf = StatsForecast(
+            models=[AutoARIMA()],
+            freq='D',
+        )
+        extrapolation = sf.forecast(df=series, h=self.data_size - self.training_set_end)
+
+        return extrapolation.values[:, 1]

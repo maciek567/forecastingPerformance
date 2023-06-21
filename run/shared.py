@@ -1,6 +1,3 @@
-import sys
-
-sys.path.append('..')
 from timeseries.enums import DeviationScale, SeriesColumn
 
 company_name = "Intel"

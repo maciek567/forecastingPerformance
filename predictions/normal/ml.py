@@ -10,9 +10,9 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
-from predictions import utils
-from predictions.prediction import Prediction, PredictionResults
-from predictions.utils import PredictionMethod
+from predictions.normal import utils
+from predictions.normal.prediction import Prediction, PredictionResults
+from predictions.normal.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 

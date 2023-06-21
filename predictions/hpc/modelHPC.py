@@ -7,7 +7,7 @@ from pyspark.pandas import DataFrame
 from pyspark.sql import SparkSession
 
 sys.path.append('../..')
-from hpc.shared import obsolescence_scale
+from run.shared import obsolescence_scale
 from inout.intermediate import IntermediateProvider
 from timeseries.timeseries import DeviationRange, DeviationSource
 from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale

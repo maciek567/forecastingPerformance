@@ -3,7 +3,7 @@ import time
 import numpy as np
 from pyspark.sql import DataFrame
 
-from predictions.hpc import utilsHPC
+from predictions import utils
 from timeseries.enums import DeviationSource, SeriesColumn
 
 
@@ -39,9 +39,9 @@ class PredictionHPC:
 
         validation_numpy = np.array(self.data_to_validate.head(self.validation_size))[:, 1]
         validation_numpy = validation_numpy.astype(np.float)
-        rmse = utilsHPC.calculate_rmse(validation_numpy, extrapolation)
-        mae = utilsHPC.calculate_mae(validation_numpy, extrapolation)
-        mape = utilsHPC.calculate_mape(validation_numpy, extrapolation)
+        rmse = utils.calculate_rmse(validation_numpy, extrapolation)
+        mae = utils.calculate_mae(validation_numpy, extrapolation)
+        mape = utils.calculate_mape(validation_numpy, extrapolation)
         results = PredictionResultsHPC(elapsed_time_ms, rmse, mae, mape)
 
         return results
