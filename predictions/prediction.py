@@ -17,7 +17,7 @@ class PredictionResults:
 
 class Prediction:
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
         self.data_to_learn = prices[:prediction_border].dropna()
         self.training_set_end = len(self.data_to_learn)
         self.prediction_delay = prediction_delay
@@ -28,6 +28,7 @@ class Prediction:
         self.column = column
         self.deviation = deviation
         self.mitigation_time = mitigation_time
+        self.spark = spark
 
     def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionResults:
         start_time = time.time_ns()

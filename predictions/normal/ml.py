@@ -10,16 +10,17 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
-from predictions.normal import utils
-from predictions.normal.prediction import Prediction, PredictionResults
-from predictions.normal.utils import PredictionMethod
+from predictions import utils
+from predictions.prediction import Prediction, PredictionResults
+from predictions.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
 class Reservoir(Prediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
+                         spark)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
@@ -53,8 +54,9 @@ class Reservoir(Prediction):
 
 class XGBoost(Prediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time)
+                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
+                         spark)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)

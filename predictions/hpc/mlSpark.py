@@ -1,21 +1,22 @@
 import numpy as np
 from numpy import ndarray
+from pandas import Series
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import GBTRegressor
-from pyspark.sql import DataFrame
+
 from pyspark.sql.functions import monotonically_increasing_id
 
-from predictions.hpc.predictionHPC import PredictionHPC, PredictionResultsHPC
+from predictions.prediction import PredictionResults, Prediction
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
-class GBTRegressorHPC(PredictionHPC):
-    def __init__(self, prices: DataFrame, real_prices: DataFrame, prediction_border: int, prediction_delay: int,
+class GBTRegressorSpark(Prediction):
+    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
                  column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
                          spark)
 
-    def extrapolate_and_measure(self, params: dict) -> PredictionResultsHPC:
+    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> ndarray:

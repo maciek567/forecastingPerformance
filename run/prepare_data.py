@@ -1,13 +1,13 @@
 import sys
 
-from shared import obsolescence_scale, company_name
-
 sys.path.append('..')
 from timeseries.timeseries import StockMarketSeries
-from timeseries.enums import SeriesColumn
+from timeseries.enums import SeriesColumn, DeviationScale
 
+company_name = "Accenture"
 time_series_start = "2017-01-03"
 time_series_values = 300
+obsolescence_scale = {DeviationScale.SLIGHTLY: 5, DeviationScale.MODERATELY: 15, DeviationScale.HIGHLY: 50}
 
 stock = StockMarketSeries(company_name, time_series_start, time_series_values,
                           columns={SeriesColumn.CLOSE},
