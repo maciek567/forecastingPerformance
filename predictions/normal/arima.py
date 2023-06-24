@@ -1,4 +1,3 @@
-from numpy import ndarray
 from pandas import DataFrame
 from pandas import Series
 from pmdarima import auto_arima
@@ -35,7 +34,7 @@ class ManualArima(ArimaPrediction):
     def find_d(self):
         return ndiffs(self.data_to_learn, test='adf')
 
-    def extrapolate(self, params: dict) -> Series:
+    def extrapolate(self, params: dict) -> PredictionResults:
         data_with_prediction = self.data_to_learn.copy()
         for date, r in self.data_to_learn_and_validate.iloc[self.training_set_end:].items():
             model = ARIMA(data_with_prediction,
@@ -46,10 +45,10 @@ class ManualArima(ArimaPrediction):
             data_with_prediction = data_with_prediction.append(prediction_series)
 
         extrapolation = data_with_prediction[self.training_set_end:]
-        return extrapolation
+        return PredictionResults(results=extrapolation)
 
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction,  ManualArima, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, ManualArima, company_name, save_file)
 
 
 class AutoArimaPMD(ArimaPrediction):
@@ -62,20 +61,21 @@ class AutoArimaPMD(ArimaPrediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         self.auto_arima_model = auto_arima(self.data_to_learn,
                                            stat_p=params.get("p", 1),
                                            start_q=params.get("q", 1),
                                            test="adf",
                                            trace=True)
         periods = self.data_size - self.training_set_end
-        return self.auto_arima_model.predict(n_periods=periods).values
+        result = self.auto_arima_model.predict(n_periods=periods).values
+        return PredictionResults(results=result)
 
     def print_summary(self):
         print(self.auto_arima_model.summary())
 
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaPMD, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaPMD, company_name, save_file)
 
 
 class AutoArimaSF(ArimaPrediction):
@@ -88,17 +88,21 @@ class AutoArimaSF(ArimaPrediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         series_id = [0 for i in range(0, self.training_set_end)]
         series = DataFrame({"ds": self.data_to_learn.keys(), "y": self.data_to_learn.values, "unique_id": series_id})
 
         sf = StatsForecast(
             models=[AutoARIMA()],
-            freq='D',
+            freq='D'
         )
-        extrapolation = sf.forecast(df=series, h=self.data_size - self.training_set_end)
+        sf.fit(df=series)
+        extrapolation = sf.predict(h=self.data_size - self.training_set_end)
 
-        return extrapolation.values[:, 1]
+        result = extrapolation.values[:, 1]
+        params = sf.fitted_[0][0].model_['arma']
 
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaSF, save_file)
+        return PredictionResults(results=result, parameters=params)
+
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaSF, company_name, save_file)

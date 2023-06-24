@@ -34,18 +34,17 @@ def method_name(method) -> str:
     return str(method)[str(method).index(".") + 1: -2].split(".")[-1]
 
 
-def plot_extrapolation(model, result: ndarray, method, save_file: bool = False) -> None:
+def plot_extrapolation(model, result: ndarray, method, company_name, save_file: bool = False) -> None:
     plt.plot(model.data_to_learn_and_validate.values, "r", label="Actual data")
     plt.plot(range(model.prediction_start, model.data_size), result, "b", label="Prediction")
     plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
-    title = f"{method_name(method)} extrapolation [{model.column.value} prices, {model.deviation.value}]"
-    plt.title(title)
+    plt.title(f"{company_name} [{method_name(method)}, {model.column.value} prices, {model.deviation.value}]")
     plt.xlabel(TIME_DAYS_LABEL)
     plt.ylabel(PRICE_USD_LABEL)
     plt.legend()
 
     if save_file:
-        path = os.path.join('..', 'data', 'predictions', title.replace(' ', '_').replace(',', ''))
+        name = f"{company_name}_{model.column.value}_{method_name(method)}_{model.deviation.value}"
+        path = os.path.join('..', 'data', 'predictions', name)
         plt.savefig(f"{path}.pdf", bbox_inches='tight')
-    else:
-        plt.show()
+    plt.show()

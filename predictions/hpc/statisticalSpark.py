@@ -1,4 +1,3 @@
-from numpy import ndarray
 from pandas import Series, DataFrame
 from statsforecast import StatsForecast
 from statsforecast.models import AutoCES
@@ -17,7 +16,7 @@ class CesSpark(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         series_id = [0 for i in range(0, self.training_set_end)]
         series = DataFrame({"ds": self.data_to_learn.keys(), "y": self.data_to_learn.values, "unique_id": series_id})
         series['unique_id'] = series['unique_id'].astype(str)
@@ -28,8 +27,8 @@ class CesSpark(Prediction):
             freq='D',
         )
         extrapolation = sf.forecast(df=sdf, h=self.data_size - self.training_set_end)
+        result = extrapolation.toPandas()["CES"]
+        return PredictionResults(results=result)
 
-        return extrapolation.toPandas()["CES"]
-
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, CesSpark, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, CesSpark, company_name, save_file)

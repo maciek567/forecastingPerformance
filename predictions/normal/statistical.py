@@ -1,4 +1,3 @@
-from numpy import ndarray
 from pandas import Series, DataFrame
 from statsforecast import StatsForecast
 from statsforecast.models import AutoCES
@@ -17,7 +16,7 @@ class Ces(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         series_id = [0 for i in range(0, self.training_set_end)]
         series = DataFrame({"ds": self.data_to_learn.keys(), "y": self.data_to_learn.values, "unique_id": series_id})
 
@@ -26,8 +25,8 @@ class Ces(Prediction):
             freq='D',
         )
         extrapolation = sf.forecast(df=series, h=self.data_size - self.training_set_end)
+        result = extrapolation.values[:, 1]
+        return PredictionResults(results=result)
 
-        return extrapolation.values[:, 1]
-
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, Ces, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, Ces, company_name, save_file)

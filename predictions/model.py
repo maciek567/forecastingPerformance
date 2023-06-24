@@ -7,12 +7,17 @@ from pandas import DataFrame, concat
 from pyspark.sql import SparkSession
 
 from predictions import utils
+from predictions.hpc.arimaSpark import AutoArimaSpark
+from predictions.hpc.mlSpark import GBTRegressorSpark
+from predictions.hpc.statisticalSpark import CesSpark
+from predictions.normal.arima import AutoArimaSF
+from predictions.normal.ml import Reservoir
 from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
 deviations_source_label = "Deviation"
 deviations_scale_label = "Scale"
-deviations_mitigation_label = "Mitigation"
+deviations_mitigation_label = "Improve"
 avg_time_label = "Time [ms]"
 std_dev_time_label = "Time SD"
 avg_mitigation_time_label = "M. time"
@@ -20,14 +25,14 @@ avg_rmse_label = "RMSE"
 avg_mae_label = "MAE"
 avg_mape_label = "MAPE"
 std_dev_mape_label = "MAPE SD"
+additional_parameters_label = "(p,d,q,P,D,Q)"
 
 
 class PredictionModel:
 
     def __init__(self, stock: StockMarketSeries, prediction_start: int, column: SeriesColumn,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
-                 is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
-                 is_spark: bool = False):
+                 is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5):
         self.stock = stock
         self.prediction_start = prediction_start
         self.column = column
@@ -44,7 +49,7 @@ class PredictionModel:
         self.model_real = None
         self.model_deviated = None
         self.model_mitigated = None
-        self.spark = self.start_spark() if is_spark else None
+        self.spark = None
 
     def get_deviation_mitigation_sources(self) -> list:
         if self.is_deviation_mitigation:
@@ -58,14 +63,17 @@ class PredictionModel:
     def configure_model(self, method, **kwargs):
         self.method = method
         self.additional_params = kwargs
+        self.spark = self.start_spark(method)
         self.model_real = self.create_model_real()
         self.model_deviated = self.create_model_deviated_set()
         self.model_mitigated = self.create_model_mitigated_set()
         return self
 
     @staticmethod
-    def start_spark():
-        return SparkSession.builder.appName("Predictions").getOrCreate()
+    def start_spark(method):
+        spark_methods = [AutoArimaSpark, CesSpark, GBTRegressorSpark]
+        run_spark = True if method in spark_methods else False
+        return SparkSession.builder.appName("Predictions").getOrCreate() if run_spark else None
 
     def create_model_real(self):
         return self.method(prices=self.stock.real_series[self.column],
@@ -121,18 +129,21 @@ class PredictionModel:
 
         return series_deviated
 
-    def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None, save_file: bool = False) -> None:
-        model = self.model_real if source == DeviationSource.NONE else self.model_deviated[source][scale]
-        extrapolation = model.extrapolate(self.additional_params)
-        model.plot_extrapolation(extrapolation, save_file=save_file)
+    def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None, mitigation: bool = False,
+                        save_file: bool = False) -> None:
+        model = None
+        if source == DeviationSource.NONE:
+            model = self.model_real
+        elif not mitigation:
+            model = self.model_deviated[source][scale]
+        else:
+            model = self.model_mitigated[source][scale]
+        prediction_stats = model.extrapolate(self.additional_params)
+        model.plot_extrapolation(prediction_stats.results, self.stock.company_name, save_file=save_file)
 
     def compute_statistics_set(self, save_file=False) -> None:
-        results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
-                                     avg_time_label, std_dev_time_label, avg_mitigation_time_label,
-                                     avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
-
         real = self.compute_statistics(DeviationSource.NONE)
-        results = results.append(real, ignore_index=True)
+        results = DataFrame([real])
 
         for deviation_source in self.deviations_sources:
             for deviation_scale in self.deviations_scale:
@@ -175,8 +186,12 @@ class PredictionModel:
                 avg_mitigation_time_label: mean([r.mitigation_time for r in results]),
                 avg_rmse_label: mean([r.rmse for r in results]),
                 avg_mae_label: mean([r.mae for r in results]),
-                avg_mape_label: mean(r.mape for r in results),
-                std_dev_mape_label: stdev([r.mape for r in results])}
+                avg_mape_label: mean(r.mape for r in results)}
+            if self.method == Reservoir:
+                dict_result[std_dev_mape_label] = stdev([r.mape for r in results])
+            elif self.method == AutoArimaSF or self.method == AutoArimaSpark:
+                params = results[0].parameters
+                dict_result[additional_parameters_label] = f"({params[0]},{params[1]},{params[2]},{params[3]},{params[4]},{params[5]})"
         return dict_result
 
     def manage_output(self, results: DataFrame, save_file: bool) -> None:
@@ -198,6 +213,3 @@ class PredictionModel:
             latex_file = open(path + ".tex", "w")
             latex_file.write(latex)
             latex_file.close()
-
-
-

@@ -24,7 +24,7 @@ class Reservoir(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionResults:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         train = dl.loader_explicit(utils.normalize(self.data_to_learn, self.data_to_learn), test_size=0)
         _, x_train, _, y_train = train()
         test = dl.loader_explicit(utils.normalize(self.data_to_validate, self.data_to_learn), test_size=0)
@@ -45,10 +45,11 @@ class Reservoir(Prediction):
             self.data_size = len(self.data_to_learn) + len(result)
             self.data_to_validate = self.data_to_validate[0:-2]
 
-        return utils.denormalize(np.array(result), self.data_to_learn)
+        result = utils.denormalize(np.array(result), self.data_to_learn)
+        return PredictionResults(results=result)
 
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, Reservoir, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, Reservoir, company_name, save_file)
 
 
 class XGBoost(Prediction):
@@ -87,7 +88,7 @@ class XGBoost(Prediction):
     def evaluate_model(real_y, predicted_y) -> ndarray:
         return np.sum((real_y * 100 - predicted_y * 100) ** 2)
 
-    def extrapolate(self, params: dict) -> ndarray:
+    def extrapolate(self, params: dict) -> PredictionResults:
         indices = DataFrame({'X': np.linspace(0, self.data_size, self.data_size)})
         x, x_test, y, y_test = train_test_split(indices, self.data_to_learn_and_validate.values,
                                                 test_size=self.data_size - self.training_set_end,
@@ -113,7 +114,8 @@ class XGBoost(Prediction):
         else:
             model = XGBRegressor(n_estimators=250)
 
-        return self.forecast(x, y, x_test, model)
+        result = self.forecast(x, y, x_test, model)
+        return PredictionResults(results=result)
 
-    def plot_extrapolation(self, prediction, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, XGBoost, save_file)
+    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, XGBoost, company_name, save_file)
