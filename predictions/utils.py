@@ -1,4 +1,4 @@
-from enum import Enum
+import os
 
 from matplotlib import pyplot as plt
 from numpy import ndarray
@@ -6,12 +6,6 @@ from numpy import sqrt, mean
 from pandas import Series, DataFrame
 
 from util.graphs import TIME_DAYS_LABEL, PRICE_USD_LABEL
-
-
-class PredictionMethod(Enum):
-    Arima = "Arima"
-    XGBoost = "XGBoost"
-    Reservoir = "Reservoir computing"
 
 
 def normalize(series: Series, original_series: Series) -> DataFrame:
@@ -36,12 +30,22 @@ def calculate_mape(actual: ndarray, result: ndarray) -> float:
     return mean(abs((result - actual) / actual)) * 100.0
 
 
-def plot_extrapolation(model, result: ndarray, method: PredictionMethod) -> None:
+def method_name(method) -> str:
+    return str(method)[str(method).index(".") + 1: -2].split(".")[-1]
+
+
+def plot_extrapolation(model, result: ndarray, method, save_file: bool = False) -> None:
     plt.plot(model.data_to_learn_and_validate.values, "r", label="Actual data")
     plt.plot(range(model.prediction_start, model.data_size), result, "b", label="Prediction")
     plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
-    plt.title(f"{method.value} extrapolation [{model.column.value} prices, {model.deviation.value}]")
+    title = f"{method_name(method)} extrapolation [{model.column.value} prices, {model.deviation.value}]"
+    plt.title(title)
     plt.xlabel(TIME_DAYS_LABEL)
     plt.ylabel(PRICE_USD_LABEL)
     plt.legend()
-    plt.show()
+
+    if save_file:
+        path = os.path.join('..', 'data', 'predictions', title.replace(' ', '_').replace(',', ''))
+        plt.savefig(f"{path}.pdf", bbox_inches='tight')
+    else:
+        plt.show()

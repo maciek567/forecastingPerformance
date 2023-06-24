@@ -5,7 +5,6 @@ from statsforecast.models import AutoARIMA
 
 from predictions import utils
 from predictions.prediction import Prediction, PredictionResults
-from predictions.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -18,9 +17,6 @@ class ArimaPrediction(Prediction):
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
         print(f"Execution time: {elapsed_time} [ms]")
-
-    def plot_extrapolation(self, prediction):
-        utils.plot_extrapolation(self, prediction, PredictionMethod.Arima)
 
 
 class AutoArimaSpark(ArimaPrediction):
@@ -46,3 +42,5 @@ class AutoArimaSpark(ArimaPrediction):
 
         return extrapolation.toPandas()["AutoARIMA"]
 
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaSpark, save_file)

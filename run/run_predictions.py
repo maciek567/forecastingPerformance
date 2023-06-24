@@ -4,12 +4,12 @@ import sys
 sys.path.append('..')
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
 
+from predictions.hpc.statisticalSpark import CesSpark
 from predictions.hpc.arimaSpark import AutoArimaSpark
 from predictions.hpc.mlSpark import GBTRegressorSpark
-from predictions.normal.arima import AutoArimaSF
 from predictions.model import PredictionModel
 from timeseries.timeseries import StockMarketSeries
-from timeseries.enums import SeriesColumn
+from timeseries.enums import SeriesColumn, DeviationSource
 
 company_name = "Accenture"
 column = SeriesColumn.CLOSE
@@ -18,9 +18,9 @@ time_series_values = 300
 
 prediction_start = 280
 iterations = 2
-method = AutoArimaSF
+method = CesSpark
 
-spark_methods = [AutoArimaSpark, GBTRegressorSpark]
+spark_methods = [AutoArimaSpark, CesSpark, GBTRegressorSpark]
 is_spark = True if method in spark_methods else False
 
 stock = StockMarketSeries(company_name, time_series_start, time_series_values,
@@ -34,5 +34,5 @@ stock = StockMarketSeries(company_name, time_series_start, time_series_values,
 
 base_model = PredictionModel(stock, prediction_start, column, iterations=iterations, is_spark=is_spark)
 model = base_model.configure_model(method, optimize=False)
-# model.plot_prediction(source=DeviationSource.NONE)
-model.compute_statistics_set(save_to_file=True)
+model.plot_prediction(source=DeviationSource.NONE, save_file=True)
+model.compute_statistics_set(save_file=True)

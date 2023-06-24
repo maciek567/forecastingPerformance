@@ -6,6 +6,7 @@ import pandas as pd
 from pandas import DataFrame, concat
 from pyspark.sql import SparkSession
 
+from predictions import utils
 from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
@@ -120,12 +121,12 @@ class PredictionModel:
 
         return series_deviated
 
-    def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None) -> None:
+    def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None, save_file: bool = False) -> None:
         model = self.model_real if source == DeviationSource.NONE else self.model_deviated[source][scale]
         extrapolation = model.extrapolate(self.additional_params)
-        model.plot_extrapolation(extrapolation)
+        model.plot_extrapolation(extrapolation, save_file=save_file)
 
-    def compute_statistics_set(self, save_to_file=False) -> None:
+    def compute_statistics_set(self, save_file=False) -> None:
         results = DataFrame(columns=[deviations_source_label, deviations_scale_label, deviations_mitigation_label,
                                      avg_time_label, std_dev_time_label, avg_mitigation_time_label,
                                      avg_rmse_label, avg_mae_label, avg_mape_label, std_dev_mape_label])
@@ -143,7 +144,7 @@ class PredictionModel:
                     if mitigated:
                         results = concat([results, DataFrame([mitigated])], ignore_index=True)
 
-        self.manage_output(results, save_to_file)
+        self.manage_output(results, save_file)
 
     def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None,
                            mitigation: bool = False) -> dict:
@@ -178,7 +179,7 @@ class PredictionModel:
                 std_dev_mape_label: stdev([r.mape for r in results])}
         return dict_result
 
-    def manage_output(self, results: DataFrame, save_to_file: bool) -> None:
+    def manage_output(self, results: DataFrame, save_file: bool) -> None:
         pd.set_option("display.precision", 2)
         header = \
             f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n"
@@ -186,18 +187,17 @@ class PredictionModel:
         latex = results.to_latex(index=False,
                                  formatters={"name": str.upper},
                                  float_format="{:.2f}".format)
-        if not save_to_file:
+        if not save_file:
             print(header + "\n" + text + "\n\n" + latex)
         else:
             base_path = "../data/predictions"
             os.makedirs(base_path, exist_ok=True)
-            path = f"{base_path}/{self.stock.company_name}_{self.column.value}_{self.method_name()}"
+            path = f"{base_path}/{self.stock.company_name}_{self.column.value}_{utils.method_name(self.method)}"
             results.to_csv(path + ".csv")
 
             latex_file = open(path + ".tex", "w")
             latex_file.write(latex)
             latex_file.close()
 
-    def method_name(self) -> str:
-        return str(self.method)[str(self.method).index(".") + 1: -2].split(".")[-1]
+
 

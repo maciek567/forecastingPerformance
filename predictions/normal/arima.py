@@ -9,7 +9,6 @@ from statsmodels.tsa.arima.model import ARIMA
 
 from predictions import utils
 from predictions.prediction import Prediction, PredictionResults
-from predictions.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -22,9 +21,6 @@ class ArimaPrediction(Prediction):
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
         print(f"Execution time: {elapsed_time} [ms]")
-
-    def plot_extrapolation(self, prediction):
-        utils.plot_extrapolation(self, prediction, PredictionMethod.Arima)
 
 
 class ManualArima(ArimaPrediction):
@@ -52,6 +48,9 @@ class ManualArima(ArimaPrediction):
         extrapolation = data_with_prediction[self.training_set_end:]
         return extrapolation
 
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction,  ManualArima, save_file)
+
 
 class AutoArimaPMD(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
@@ -75,6 +74,9 @@ class AutoArimaPMD(ArimaPrediction):
     def print_summary(self):
         print(self.auto_arima_model.summary())
 
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaPMD, save_file)
+
 
 class AutoArimaSF(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
@@ -97,3 +99,6 @@ class AutoArimaSF(ArimaPrediction):
         extrapolation = sf.forecast(df=series, h=self.data_size - self.training_set_end)
 
         return extrapolation.values[:, 1]
+
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaSF, save_file)

@@ -12,7 +12,6 @@ from xgboost import XGBRegressor
 
 from predictions import utils
 from predictions.prediction import Prediction, PredictionResults
-from predictions.utils import PredictionMethod
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -48,8 +47,8 @@ class Reservoir(Prediction):
 
         return utils.denormalize(np.array(result), self.data_to_learn)
 
-    def plot_extrapolation(self, result) -> None:
-        utils.plot_extrapolation(self, result, PredictionMethod.Reservoir)
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, Reservoir, save_file)
 
 
 class XGBoost(Prediction):
@@ -116,5 +115,5 @@ class XGBoost(Prediction):
 
         return self.forecast(x, y, x_test, model)
 
-    def plot_extrapolation(self, result) -> None:
-        utils.plot_extrapolation(self, result, PredictionMethod.XGBoost)
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, XGBoost, save_file)

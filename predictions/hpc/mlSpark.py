@@ -6,6 +6,7 @@ from pyspark.ml.regression import GBTRegressor
 
 from pyspark.sql.functions import monotonically_increasing_id
 
+from predictions import utils
 from predictions.prediction import PredictionResults, Prediction
 from timeseries.enums import SeriesColumn, DeviationSource
 
@@ -33,3 +34,6 @@ class GBTRegressorSpark(Prediction):
 
         results = [row[2] for row in result]
         return np.array(results)
+
+    def plot_extrapolation(self, prediction, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, GBTRegressorSpark, save_file)
