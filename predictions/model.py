@@ -4,14 +4,10 @@ from statistics import mean, stdev
 
 import pandas as pd
 from pandas import DataFrame, concat
-from pyspark.sql import SparkSession
 
 from predictions import utils
-from predictions.hpc.arimaSpark import AutoArimaSpark
-from predictions.hpc.mlSpark import GBTRegressorSpark
-from predictions.hpc.statisticalSpark import CesSpark
-from predictions.normal.arima import AutoArimaSF
-from predictions.normal.ml import Reservoir
+from predictions.conditions import are_method_results_undeterministic, do_method_return_extra_params
+from predictions.spark import handle_spark
 from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
@@ -63,17 +59,11 @@ class PredictionModel:
     def configure_model(self, method, **kwargs):
         self.method = method
         self.additional_params = kwargs
-        self.spark = self.start_spark(method)
+        self.spark = handle_spark(method)
         self.model_real = self.create_model_real()
         self.model_deviated = self.create_model_deviated_set()
         self.model_mitigated = self.create_model_mitigated_set()
         return self
-
-    @staticmethod
-    def start_spark(method):
-        spark_methods = [AutoArimaSpark, CesSpark, GBTRegressorSpark]
-        run_spark = True if method in spark_methods else False
-        return SparkSession.builder.appName("Predictions").getOrCreate() if run_spark else None
 
     def create_model_real(self):
         return self.method(prices=self.stock.real_series[self.column],
@@ -187,11 +177,12 @@ class PredictionModel:
                 avg_rmse_label: mean([r.rmse for r in results]),
                 avg_mae_label: mean([r.mae for r in results]),
                 avg_mape_label: mean(r.mape for r in results)}
-            if self.method == Reservoir:
+            if are_method_results_undeterministic(self.method, self.spark):
                 dict_result[std_dev_mape_label] = stdev([r.mape for r in results])
-            elif self.method == AutoArimaSF or self.method == AutoArimaSpark:
+            elif do_method_return_extra_params(self.method):
                 params = results[0].parameters
-                dict_result[additional_parameters_label] = f"({params[0]},{params[1]},{params[2]},{params[3]},{params[4]},{params[5]})"
+                p_d_q_P_D_Q = f"({params[0]},{params[1]},{params[2]},{params[3]},{params[4]},{params[5]})"
+                dict_result[additional_parameters_label] = p_d_q_P_D_Q
         return dict_result
 
     def manage_output(self, results: DataFrame, save_file: bool) -> None:

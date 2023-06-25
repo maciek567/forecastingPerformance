@@ -1,8 +1,5 @@
-import sys
-
-sys.path.append('..')
-from timeseries.timeseries import StockMarketSeries
 from timeseries.enums import SeriesColumn, DeviationScale
+from timeseries.timeseries import StockMarketSeries
 
 company_name = "Accenture"
 time_series_start = "2017-01-03"
