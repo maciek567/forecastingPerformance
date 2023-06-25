@@ -11,8 +11,9 @@ time_series_start = "2017-01-03"
 time_series_values = 300
 
 prediction_start = 280
-iterations = 5
-methods = [AutoArimaSF, Ces, XGBoost, Reservoir]
+iterations = 2
+unique_ids = True
+methods = [AutoArimaSF]
 
 stock = StockMarketSeries(company_name, time_series_start, time_series_values,
                           weights={SeriesColumn.OPEN: 0.2,
@@ -23,7 +24,7 @@ stock = StockMarketSeries(company_name, time_series_start, time_series_values,
                                    SeriesColumn.VOLUME: 0.05},
                           )
 
-base_model = PredictionModel(stock, prediction_start, column, iterations=iterations)
+base_model = PredictionModel(stock, prediction_start, column, iterations=iterations, unique_ids=unique_ids)
 
 for method in methods:
     model = base_model.configure_model(method, optimize=False)

@@ -1,4 +1,5 @@
 import os
+import uuid
 import warnings
 from statistics import mean, stdev
 
@@ -28,7 +29,8 @@ class PredictionModel:
 
     def __init__(self, stock: StockMarketSeries, prediction_start: int, column: SeriesColumn,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
-                 is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5):
+                 is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
+                 unique_ids: bool = False):
         self.stock = stock
         self.prediction_start = prediction_start
         self.column = column
@@ -46,6 +48,7 @@ class PredictionModel:
         self.model_deviated = None
         self.model_mitigated = None
         self.spark = None
+        self.unique_ids = unique_ids
 
     def get_deviation_mitigation_sources(self) -> list:
         if self.is_deviation_mitigation:
@@ -199,6 +202,8 @@ class PredictionModel:
             base_path = "../data/predictions"
             os.makedirs(base_path, exist_ok=True)
             path = f"{base_path}/{self.stock.company_name}_{self.column.value}_{utils.method_name(self.method)}"
+            if self.unique_ids:
+                path += f"_{uuid.uuid4()}"
             results.to_csv(path + ".csv")
 
             latex_file = open(path + ".tex", "w")
