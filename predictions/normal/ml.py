@@ -1,9 +1,7 @@
-import auto_esn.utils.dataset_loader as dl
 import numpy as np
-import torch
-from auto_esn.esn.esn import DeepESN
 from numpy import ndarray
 from pandas import Series, DataFrame
+from pyEsn.ESN import ESN
 from sklearn.model_selection import train_test_split
 from skopt import gp_minimize
 from skopt.space import Real, Integer
@@ -25,28 +23,25 @@ class Reservoir(Prediction):
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> PredictionResults:
-        train = dl.loader_explicit(utils.normalize(self.data_to_learn, self.data_to_learn), test_size=0)
-        _, x_train, _, y_train = train()
-        test = dl.loader_explicit(utils.normalize(self.data_to_validate, self.data_to_learn), test_size=0)
-        _, x_test, _, y_test = test()
+        n_reservoir = 500
+        sparsity = 0.2
+        rand_seed = 23
+        spectral_radius = 1.2
+        noise = .0005
 
-        esn = DeepESN(num_layers=2,
-                      hidden_size=100)
-        esn.fit(x_train, y_train)
+        esn = ESN(n_inputs=1,
+                  n_outputs=1,
+                  n_reservoir=n_reservoir,
+                  sparsity=sparsity,
+                  random_state=rand_seed,
+                  spectral_radius=spectral_radius,
+                  noise=noise)
 
-        predictions = []
-        for j in range(self.data_size - self.training_set_end):
-            point_to_predict = x_test[j: j + 1]
-            predicted_value = esn(point_to_predict)
-            predictions.append(predicted_value)
+        esn.fit(np.ones(len(self.data_to_learn)), self.data_to_learn.values)
 
-        result = [x[0] for x in torch.vstack(predictions).tolist()]
-        if len(self.data_to_learn) + len(result) < self.data_size:
-            self.data_size = len(self.data_to_learn) + len(result)
-            self.data_to_validate = self.data_to_validate[0:-2]
+        prediction = esn.predict(np.ones(self.data_size - self.training_set_end))
 
-        result = utils.denormalize(np.array(result), self.data_to_learn)
-        return PredictionResults(results=result)
+        return PredictionResults(results=prediction)
 
     def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
         utils.plot_extrapolation(self, prediction, Reservoir, company_name, save_file)
