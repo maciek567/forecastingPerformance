@@ -51,5 +51,5 @@ class AutoArimaSpark(ArimaPrediction):
 
         return PredictionResults(results=result, parameters=params)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaSpark, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaSpark, company_name, to_predict, save_file)

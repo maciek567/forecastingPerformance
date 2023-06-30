@@ -4,10 +4,9 @@ import os
 from pandas import Series
 from pyspark.sql import DataFrame
 
+from inout.paths import processed_path
 from timeseries.enums import DeviationScale, DeviationSource, SeriesColumn
 from timeseries.utils import Mitigation
-
-processed_path = "../data/processed/"
 
 
 class IntermediateProvider:

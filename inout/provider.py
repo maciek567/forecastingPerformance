@@ -3,7 +3,7 @@ from datetime import datetime
 import yfinance as yf
 from pandas import DataFrame, read_csv
 
-stock_path = "../data/timeseries/stock/"
+from inout.paths import stock_path
 
 
 class YFinanceProvider:

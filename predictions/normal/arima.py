@@ -47,8 +47,8 @@ class ManualArima(ArimaPrediction):
         extrapolation = data_with_prediction[self.training_set_end:]
         return PredictionResults(results=extrapolation)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, ManualArima, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, ManualArima, company_name, to_predict, save_file)
 
 
 class AutoArimaPMD(ArimaPrediction):
@@ -74,8 +74,8 @@ class AutoArimaPMD(ArimaPrediction):
     def print_summary(self):
         print(self.auto_arima_model.summary())
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaPMD, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaPMD, company_name, to_predict, save_file)
 
 
 class AutoArimaSF(ArimaPrediction):
@@ -93,8 +93,8 @@ class AutoArimaSF(ArimaPrediction):
         series = DataFrame({"ds": self.data_to_learn.keys(), "y": self.data_to_learn.values, "unique_id": series_id})
 
         sf = StatsForecast(
-            models=[AutoARIMA()],
-            freq='D'
+            models=[AutoARIMA(seasonal=False, trace=True, max_order=8, start_p=4, start_q=4)],
+            freq='D',
         )
         sf.fit(df=series)
         extrapolation = sf.predict(h=self.data_size - self.training_set_end)
@@ -104,5 +104,5 @@ class AutoArimaSF(ArimaPrediction):
 
         return PredictionResults(results=result, parameters=params)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaSF, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, AutoArimaSF, company_name, to_predict, save_file)

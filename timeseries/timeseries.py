@@ -2,10 +2,10 @@ from pandas import Series
 
 from inout.intermediate import IntermediateProvider
 from inout.provider import YFinanceProvider
+from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, Mitigation
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
-from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, Mitigation
 
 
 class StockMarketSeries:

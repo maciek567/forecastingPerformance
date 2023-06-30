@@ -33,5 +33,5 @@ class GBTRegressorSpark(Prediction):
         results = [row[2] for row in result]
         return PredictionResults(results=np.array(results))
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, GBTRegressorSpark, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, GBTRegressorSpark, company_name, to_predict, save_file)

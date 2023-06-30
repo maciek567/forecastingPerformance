@@ -43,8 +43,8 @@ class Reservoir(Prediction):
 
         return PredictionResults(results=prediction)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, Reservoir, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, Reservoir, company_name, to_predict, save_file)
 
 
 class XGBoost(Prediction):
@@ -112,5 +112,5 @@ class XGBoost(Prediction):
         result = self.forecast(x, y, x_test, model)
         return PredictionResults(results=result)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, XGBoost, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, XGBoost, company_name, to_predict, save_file)

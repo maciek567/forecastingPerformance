@@ -34,7 +34,7 @@ def method_name(method) -> str:
     return str(method)[str(method).index(".") + 1: -2].split(".")[-1]
 
 
-def plot_extrapolation(model, result: ndarray, method, company_name, save_file: bool = False) -> None:
+def plot_extrapolation(model, result: ndarray, method, company_name, to_predict, save_file: bool = False) -> None:
     plt.plot(model.data_to_learn_and_validate.values, "r", label="Actual data")
     plt.plot(range(model.prediction_start, model.data_size), result, "b", label="Prediction")
     plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
@@ -44,7 +44,7 @@ def plot_extrapolation(model, result: ndarray, method, company_name, save_file: 
     plt.legend()
 
     if save_file:
-        name = f"{company_name}_{model.column.value}_{method_name(method)}_{model.deviation.value}"
+        name = f"{company_name}_{model.column.value}_{method_name(method)}_{model.deviation.value}_{to_predict}"
         path = os.path.join('..', 'data', 'predictions', name)
         plt.savefig(f"{path}.pdf", bbox_inches='tight')
     plt.show()

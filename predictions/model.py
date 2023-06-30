@@ -6,6 +6,7 @@ from statistics import mean, stdev
 import pandas as pd
 from pandas import DataFrame, concat
 
+from inout.paths import prediction_path
 from predictions import utils
 from predictions.conditions import are_method_results_undeterministic, do_method_return_extra_params
 from predictions.spark import handle_spark
@@ -22,7 +23,7 @@ avg_rmse_label = "RMSE"
 avg_mae_label = "MAE"
 avg_mape_label = "MAPE"
 std_dev_mape_label = "MAPE SD"
-additional_parameters_label = "(p,d,q,P,D,Q)"
+additional_parameters_label = "(p,q)"
 
 
 class PredictionModel:
@@ -131,10 +132,15 @@ class PredictionModel:
             model = self.model_deviated[source][scale]
         else:
             model = self.model_mitigated[source][scale]
-        prediction_stats = model.extrapolate(self.additional_params)
-        model.plot_extrapolation(prediction_stats.results, self.stock.company_name, save_file=save_file)
+        try:
+            prediction_stats = model.extrapolate(self.additional_params)
+            to_predict = self.stock.data_size - self.prediction_start
+            model.plot_extrapolation(prediction_stats.results, self.stock.company_name, to_predict, save_file=save_file)
+        except Exception as e:
+            warnings.warn("Prediction method thrown an exception: " + str(e))
 
     def compute_statistics_set(self, save_file=False) -> None:
+        self.compute_statistics(DeviationSource.NONE)
         real = self.compute_statistics(DeviationSource.NONE)
         results = DataFrame([real])
 
@@ -184,8 +190,8 @@ class PredictionModel:
                 dict_result[std_dev_mape_label] = stdev([r.mape for r in results])
             elif do_method_return_extra_params(self.method):
                 params = results[0].parameters
-                p_d_q_P_D_Q = f"({params[0]},{params[1]},{params[2]},{params[3]},{params[4]},{params[5]})"
-                dict_result[additional_parameters_label] = p_d_q_P_D_Q
+                p_q = f"({params[0]},{params[1]})"
+                dict_result[additional_parameters_label] = p_q
         return dict_result
 
     def manage_output(self, results: DataFrame, save_file: bool) -> None:
@@ -199,9 +205,9 @@ class PredictionModel:
         if not save_file:
             print(header + "\n" + text + "\n\n" + latex)
         else:
-            base_path = "../data/predictions"
-            os.makedirs(base_path, exist_ok=True)
-            path = f"{base_path}/{self.stock.company_name}_{self.column.value}_{utils.method_name(self.method)}"
+            os.makedirs(prediction_path, exist_ok=True)
+            values_to_predict = self.stock.data_size - self.prediction_start
+            path = f"{prediction_path}{self.stock.company_name}_{self.column.value}_{utils.method_name(self.method)}_{values_to_predict}"
             if self.unique_ids:
                 path += f"_{uuid.uuid4()}"
             results.to_csv(path + ".csv")

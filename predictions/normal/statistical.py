@@ -28,5 +28,5 @@ class Ces(Prediction):
         result = extrapolation.values[:, 1]
         return PredictionResults(results=result)
 
-    def plot_extrapolation(self, prediction, company_name, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, Ces, company_name, save_file)
+    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
+        utils.plot_extrapolation(self, prediction, Ces, company_name, to_predict, save_file)
