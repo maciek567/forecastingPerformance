@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from pandas import Series
 from pyspark.ml.linalg import Vectors
@@ -5,7 +7,7 @@ from pyspark.ml.regression import GBTRegressor
 from pyspark.sql.functions import monotonically_increasing_id
 
 from predictions import utils
-from predictions.prediction import PredictionResults, Prediction
+from predictions.prediction import PredictionStats, Prediction
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -15,23 +17,28 @@ class GBTRegressorSpark(Prediction):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
                          spark)
 
-    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> PredictionResults:
+    def extrapolate(self, params: dict) -> PredictionStats:
         learn_id = self.data_to_learn.select("*").withColumn("id", monotonically_increasing_id())
         validate_id = self.data_to_validate.select("*").withColumn("id", self.data_size + monotonically_increasing_id())
         train = learn_id.rdd.map(lambda x: (Vectors.dense(float(x[2])), x[1])).toDF(["features", "label"])
         test = validate_id.rdd.map(lambda x: (Vectors.dense(float(x[2])), x[1])).toDF(["features", "label"])
 
+        start_time = time.perf_counter_ns()
         gbt = GBTRegressor(maxDepth=2, seed=42, leafCol="leafId")
         gbt.setMaxIter(5)
         gbt.setMinWeightFractionPerNode(0.049)
         model = gbt.fit(train)
-        result = model.transform(test).head(self.validation_size)
+        fit_time = time.perf_counter_ns()
 
-        results = [row[2] for row in result]
-        return PredictionResults(results=np.array(results))
+        result = model.transform(test).head(self.validation_size)
+        prediction_time = time.perf_counter_ns()
+
+        result = np.array([row[2] for row in result])
+        return PredictionStats(results=result,
+                               start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
     def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
         utils.plot_extrapolation(self, prediction, GBTRegressorSpark, company_name, to_predict, save_file)

@@ -34,7 +34,7 @@ class IncompleteSeries:
             {strength:
                 {column: perform_mitigation(
                     self.model.all_deviated_series[DeviationSource.INCOMPLETENESS][strength][column],
-                    self.apply_interpolation, multiple_runs=True)
+                    self.apply_interpolation)
                     for column in self.model.columns}
                 for strength in DeviationScale}
 

@@ -8,7 +8,7 @@ from pandas import DataFrame, concat
 
 from inout.paths import prediction_path
 from predictions import utils
-from predictions.conditions import are_method_results_undeterministic, do_method_return_extra_params
+from predictions.conditions import do_method_return_extra_params
 from predictions.spark import handle_spark
 from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
@@ -22,7 +22,6 @@ avg_mitigation_time_label = "M. time"
 avg_rmse_label = "RMSE"
 avg_mae_label = "MAE"
 avg_mape_label = "MAPE"
-std_dev_mape_label = "MAPE SD"
 additional_parameters_label = "(p,q)"
 
 
@@ -175,20 +174,19 @@ class PredictionModel:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
 
         dict_result = {}
+        display = "{:.2f}"
         if results:
             dict_result = {
                 deviations_source_label: sources_short()[source],
                 deviations_scale_label: scales_short()[scale],
                 deviations_mitigation_label: mitigation_short()[mitigation],
-                avg_time_label: mean([r.elapsed_time for r in results]),
-                std_dev_time_label: stdev([r.elapsed_time for r in results]),
+                avg_time_label: f"{display.format(mean([r.prepare_time for r in results]))} + {display.format(mean([r.model_time for r in results]))} + {display.format(mean([r.prediction_time for r in results]))}",
+                std_dev_time_label: stdev([r.prepare_time + r.model_time + r.prediction_time for r in results]),
                 avg_mitigation_time_label: mean([r.mitigation_time for r in results]),
                 avg_rmse_label: mean([r.rmse for r in results]),
                 avg_mae_label: mean([r.mae for r in results]),
                 avg_mape_label: mean(r.mape for r in results)}
-            if are_method_results_undeterministic(self.method, self.spark):
-                dict_result[std_dev_mape_label] = stdev([r.mape for r in results])
-            elif do_method_return_extra_params(self.method):
+            if do_method_return_extra_params(self.method):
                 params = results[0].parameters
                 p_q = f"({params[0]},{params[1]})"
                 dict_result[additional_parameters_label] = p_q

@@ -1,3 +1,4 @@
+import gc
 import time
 
 from numpy import ndarray
@@ -8,11 +9,22 @@ from timeseries.enums import DeviationSource, SeriesColumn
 
 
 class PredictionResults:
-    def __init__(self, results: ndarray = None, parameters: tuple = None, elapsed_time: float = None,
-                 rmse: float = None, mae: float = None, mape: float = None):
+    def __init__(self, results: ndarray, parameters: tuple = None,
+                 start_time: float = 0.0, model_time: float = 0.0, prediction_time: float = 0.0):
         self.results = results
-        self.elapsed_time = elapsed_time
         self.parameters = parameters
+        self.model_time = (model_time - start_time) / 1e6
+        self.prediction_time = (prediction_time - model_time) / 1e6
+
+
+class PredictionStats:
+    def __init__(self, parameters: tuple = None, start_time: float = 0.0,
+                 elapsed_time: float = 0.0, model_time: float = 0.0, prediction_time: float = 0.0,
+                 rmse: float = None, mae: float = None, mape: float = None):
+        self.parameters = parameters
+        self.prepare_time = (elapsed_time - start_time) / 1e6 - model_time - prediction_time
+        self.model_time = model_time
+        self.prediction_time = prediction_time
         self.mitigation_time = 0.0
         self.rmse = rmse
         self.mae = mae
@@ -34,15 +46,19 @@ class Prediction:
         self.mitigation_time = mitigation_time
         self.spark = spark
 
-    def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionResults:
-        start_time = time.time_ns()
+    def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionStats:
+        gc.disable()
+        start_time = time.perf_counter_ns()
         prediction = extrapolation_method(params)
-        elapsed_time_ms = (time.time_ns() - start_time) / 1e6
+        elapsed_time = time.perf_counter_ns()
+        gc.enable()
 
         rmse = utils.calculate_rmse(self.data_to_validate.values, prediction.results)
         mae = utils.calculate_mae(self.data_to_validate.values, prediction.results)
         mape = utils.calculate_mape(self.data_to_validate.values, prediction.results)
-        results = PredictionResults(elapsed_time=elapsed_time_ms, parameters=prediction.parameters,
-                                    rmse=rmse, mae=mae, mape=mape)
+        results = PredictionStats(parameters=prediction.parameters,
+                                  start_time=start_time, elapsed_time=elapsed_time,
+                                  model_time=prediction.model_time, prediction_time=prediction.prediction_time,
+                                  rmse=rmse, mae=mae, mape=mape)
 
         return results

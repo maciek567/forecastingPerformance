@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from numpy import ndarray
 from pandas import Series, DataFrame
@@ -9,7 +11,7 @@ from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
 from predictions import utils
-from predictions.prediction import Prediction, PredictionResults
+from predictions.prediction import Prediction, PredictionStats, PredictionResults
 from timeseries.enums import SeriesColumn, DeviationSource
 
 
@@ -19,7 +21,7 @@ class Reservoir(Prediction):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
                          spark)
 
-    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> PredictionResults:
@@ -29,6 +31,7 @@ class Reservoir(Prediction):
         spectral_radius = 1.2
         noise = .0005
 
+        start_time = time.perf_counter_ns()
         esn = ESN(n_inputs=1,
                   n_outputs=1,
                   n_reservoir=n_reservoir,
@@ -36,12 +39,14 @@ class Reservoir(Prediction):
                   random_state=rand_seed,
                   spectral_radius=spectral_radius,
                   noise=noise)
-
         esn.fit(np.ones(len(self.data_to_learn)), self.data_to_learn.values)
+        fit_time = time.perf_counter_ns()
 
         prediction = esn.predict(np.ones(self.data_size - self.training_set_end))
+        prediction_time = time.perf_counter_ns()
 
-        return PredictionResults(results=prediction)
+        return PredictionResults(results=prediction,
+                                 start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
     def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
         utils.plot_extrapolation(self, prediction, Reservoir, company_name, to_predict, save_file)
@@ -53,7 +58,7 @@ class XGBoost(Prediction):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
                          spark)
 
-    def extrapolate_and_measure(self, params: dict) -> PredictionResults:
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
     @staticmethod
@@ -89,6 +94,7 @@ class XGBoost(Prediction):
                                                 test_size=self.data_size - self.training_set_end,
                                                 shuffle=False)
 
+        start_time = time.perf_counter_ns()
         if params.get("optimize", False):
             space = self.optimization_space()
 
@@ -108,9 +114,13 @@ class XGBoost(Prediction):
             model = self.create_model(**best_params)
         else:
             model = XGBRegressor(n_estimators=250)
+        fit_time = time.perf_counter_ns()
 
         result = self.forecast(x, y, x_test, model)
-        return PredictionResults(results=result)
+        prediction_time = time.perf_counter_ns()
+
+        return PredictionResults(results=result,
+                                 start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
     def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
         utils.plot_extrapolation(self, prediction, XGBoost, company_name, to_predict, save_file)

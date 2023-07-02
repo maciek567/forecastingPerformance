@@ -1,5 +1,6 @@
 import os
 
+import pandas as pd
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from numpy import sqrt, mean
@@ -32,6 +33,16 @@ def calculate_mape(actual: ndarray, result: ndarray) -> float:
 
 def method_name(method) -> str:
     return str(method)[str(method).index(".") + 1: -2].split(".")[-1]
+
+
+def prepare_sf_dataframe(data_to_learn, training_set_end):
+    series_id = [0 for i in range(0, training_set_end)]
+    return pd.DataFrame({"ds": data_to_learn.keys(), "y": data_to_learn.values, "unique_id": series_id})
+
+
+def prepare_spark_dataframe(series, spark):
+    series['unique_id'] = series['unique_id'].astype(str)
+    return spark.createDataFrame(series)
 
 
 def plot_extrapolation(model, result: ndarray, method, company_name, to_predict, save_file: bool = False) -> None:
