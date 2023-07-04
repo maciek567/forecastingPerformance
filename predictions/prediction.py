@@ -5,7 +5,7 @@ from numpy import ndarray
 from pandas import Series, concat
 
 from predictions import utils
-from timeseries.enums import DeviationSource, SeriesColumn
+from timeseries.enums import DeviationSource, SeriesColumn, DeviationScale
 
 
 class PredictionResults:
@@ -33,16 +33,21 @@ class PredictionStats:
 
 class Prediction:
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        self.data_with_defects = prices[:prediction_border].values
         self.data_to_learn = prices[:prediction_border].dropna()
-        self.training_set_end = len(self.data_to_learn)
+        self.training_size = len(self.data_to_learn)
+        self.prediction_border = prediction_border
         self.prediction_delay = prediction_delay
-        self.prediction_start = self.training_set_end + prediction_delay
+        self.prediction_start = prediction_border + prediction_delay
         self.data_to_validate = Series(real_prices.values[self.prediction_start:])
-        self.data_to_learn_and_validate = concat([self.data_to_learn, self.data_to_validate])
-        self.data_size = len(self.data_to_learn_and_validate)
+        self.actual_data = real_prices
+        self.predict_size = len(self.data_to_validate)
+        self.train_and_pred_size = self.training_size + self.predict_size
         self.column = column
         self.deviation = deviation
+        self.scale = scale
         self.mitigation_time = mitigation_time
         self.spark = spark
 

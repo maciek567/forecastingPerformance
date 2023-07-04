@@ -7,17 +7,17 @@ from statsforecast.core import StatsForecast
 from statsforecast.models import AutoARIMA
 from statsmodels.tsa.arima.model import ARIMA
 
-from predictions import utils
 from predictions.prediction import Prediction, PredictionResults, PredictionStats
 from predictions.utils import prepare_sf_dataframe
-from timeseries.enums import SeriesColumn, DeviationSource
+from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
 
 
 class ArimaPrediction(Prediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
-                         spark)
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
 
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
@@ -26,9 +26,10 @@ class ArimaPrediction(Prediction):
 
 class ManualArima(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
-                         spark)
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
@@ -40,27 +41,29 @@ class ManualArima(ArimaPrediction):
         data_with_prediction = self.data_to_learn.copy()
 
         start_time = time.perf_counter_ns()
-        for date, r in self.data_to_learn_and_validate.iloc[self.training_set_end:].items():
+        for i in range(0, self.predict_size):
             model = ARIMA(data_with_prediction,
                           order=(params.get("p", 1), self.find_d(), params.get("q", 1))).fit()
 
             single_prediction = model.forecast()
-            prediction_series = Series(single_prediction.values, index=[date])
+            prediction_series = Series(single_prediction.values, index=[i])
             data_with_prediction = data_with_prediction.append(prediction_series)
         prediction_time = time.perf_counter_ns()
 
-        extrapolation = data_with_prediction[self.training_set_end:]
+        extrapolation = data_with_prediction[self.training_size:]
         return PredictionResults(results=extrapolation, start_time=start_time, prediction_time=prediction_time)
 
-    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, ManualArima, company_name, to_predict, save_file)
+    @staticmethod
+    def get_method():
+        return ManualArima
 
 
 class AutoArimaPMD(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
-                         spark)
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
         self.auto_arima_model = None
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
@@ -74,7 +77,7 @@ class AutoArimaPMD(ArimaPrediction):
                                            test="adf",
                                            trace=True)
 
-        periods = self.data_size - self.training_set_end
+        periods = self.predict_size
         result = self.auto_arima_model.predict(n_periods=periods).values
         prediction_time = time.perf_counter_ns()
 
@@ -83,22 +86,24 @@ class AutoArimaPMD(ArimaPrediction):
     def print_summary(self):
         print(self.auto_arima_model.summary())
 
-    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaPMD, company_name, to_predict, save_file)
+    @staticmethod
+    def get_method():
+        return AutoArimaPMD
 
 
 class AutoArimaSF(ArimaPrediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
-                         spark)
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
         self.auto_arima_model = None
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> PredictionResults:
-        series = prepare_sf_dataframe(self.data_to_learn, self.training_set_end)
+        series = prepare_sf_dataframe(self.data_to_learn, self.training_size)
 
         start_time = time.perf_counter_ns()
         sf = StatsForecast(
@@ -108,7 +113,7 @@ class AutoArimaSF(ArimaPrediction):
         sf.fit(df=series)
         fit_time = time.perf_counter_ns()
 
-        extrapolation = sf.predict(h=self.data_size - self.training_set_end)
+        extrapolation = sf.predict(h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
         result = extrapolation.values[:, 1]
@@ -116,5 +121,6 @@ class AutoArimaSF(ArimaPrediction):
         return PredictionResults(results=result, parameters=params,
                                  start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
-    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, AutoArimaSF, company_name, to_predict, save_file)
+    @staticmethod
+    def get_method():
+        return AutoArimaSF

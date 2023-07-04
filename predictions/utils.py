@@ -6,6 +6,7 @@ from numpy import ndarray
 from numpy import sqrt, mean
 from pandas import Series, DataFrame
 
+from timeseries.enums import DeviationSource
 from util.graphs import TIME_DAYS_LABEL, PRICE_USD_LABEL
 
 
@@ -45,17 +46,29 @@ def prepare_spark_dataframe(series, spark):
     return spark.createDataFrame(series)
 
 
-def plot_extrapolation(model, result: ndarray, method, company_name, to_predict, save_file: bool = False) -> None:
-    plt.plot(model.data_to_learn_and_validate.values, "r", label="Actual data")
-    plt.plot(range(model.prediction_start, model.data_size), result, "b", label="Prediction")
-    plt.axvline(x=model.prediction_start, color='g', label='Extrapolation start')
-    plt.title(f"{company_name} [{method_name(method)}, {model.column.value} prices, {model.deviation.value}]")
+def plot_extrapolation(model, result: ndarray, company_name: str, save_file: bool = False) -> None:
+    plt.clf()
+    if model.deviation == DeviationSource.NOISE:
+        plt.plot(model.data_with_defects, "b", label="Training data", linewidth='1')
+        plt.plot(model.actual_data.values, "r", label="Actual data", linewidth='1')
+    else:
+        plt.plot(model.actual_data.values, "r", label="Actual data", linewidth='1')
+        plt.plot(model.data_with_defects, "b", label="Training data", linewidth='1')
+
+    plt.plot(range(model.prediction_start, model.prediction_start + model.predict_size),
+             result, "cornflowerblue", label="Extrapolation", linewidth='1')
+    plt.axvline(x=model.prediction_border, color='g', label='Prediction start', linestyle="--", linewidth='1')
+
+    method = method_name(model.get_method())
+    deviation = f'{model.deviation.value}' + (f', {model.scale.value}' if model.scale is not None else "")
+    plt.title(f"{company_name} [{method}, {model.column.value} prices, {deviation}]")
     plt.xlabel(TIME_DAYS_LABEL)
     plt.ylabel(PRICE_USD_LABEL)
     plt.legend()
 
     if save_file:
-        name = f"{company_name}_{model.column.value}_{method_name(method)}_{model.deviation.value}_{to_predict}"
+        deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
+        name = f"{company_name}_{model.column.value}_{method}_{deviation}_{model.predict_size}"
         path = os.path.join('..', 'data', 'predictions', name)
         plt.savefig(f"{path}.pdf", bbox_inches='tight')
     plt.show()

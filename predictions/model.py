@@ -75,6 +75,7 @@ class PredictionModel:
                            prediction_delay=0,
                            column=self.column,
                            deviation=DeviationSource.NONE,
+                           scale=None,
                            spark=self.spark)
 
     def create_model_deviated_set(self):
@@ -96,6 +97,7 @@ class PredictionModel:
                     deviation_scale] if source == DeviationSource.TIMELINESS else 0,
                 column=self.column,
                 deviation=source,
+                scale=deviation_scale,
                 spark=self.spark)
             for deviation_scale in self.deviations_scale}
 
@@ -110,6 +112,7 @@ class PredictionModel:
                 prediction_delay=0,
                 column=self.column,
                 deviation=source,
+                scale=deviation_scale,
                 spark=self.spark)
             for deviation_scale in self.deviations_scale}
 
@@ -133,8 +136,7 @@ class PredictionModel:
             model = self.model_mitigated[source][scale]
         try:
             prediction_stats = model.extrapolate(self.additional_params)
-            to_predict = self.stock.data_size - self.prediction_start
-            model.plot_extrapolation(prediction_stats.results, self.stock.company_name, to_predict, save_file=save_file)
+            utils.plot_extrapolation(model, prediction_stats.results, self.stock.company_name, save_file=save_file)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 

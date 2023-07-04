@@ -6,23 +6,24 @@ from pyspark.ml.linalg import Vectors
 from pyspark.ml.regression import GBTRegressor
 from pyspark.sql.functions import monotonically_increasing_id
 
-from predictions import utils
 from predictions.prediction import PredictionStats, Prediction
-from timeseries.enums import SeriesColumn, DeviationSource
+from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
 
 
 class GBTRegressorSpark(Prediction):
     def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, mitigation_time: int = 0, spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, mitigation_time,
-                         spark)
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> PredictionStats:
         learn_id = self.data_to_learn.select("*").withColumn("id", monotonically_increasing_id())
-        validate_id = self.data_to_validate.select("*").withColumn("id", self.data_size + monotonically_increasing_id())
+        validate_id = self.data_to_validate.select("*").withColumn("id",
+                                                                   self.train_and_pred_size + monotonically_increasing_id())
         train = learn_id.rdd.map(lambda x: (Vectors.dense(float(x[2])), x[1])).toDF(["features", "label"])
         test = validate_id.rdd.map(lambda x: (Vectors.dense(float(x[2])), x[1])).toDF(["features", "label"])
 
@@ -40,5 +41,6 @@ class GBTRegressorSpark(Prediction):
         return PredictionStats(results=result,
                                start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
-    def plot_extrapolation(self, prediction, company_name, to_predict, save_file: bool = False):
-        utils.plot_extrapolation(self, prediction, GBTRegressorSpark, company_name, to_predict, save_file)
+    @staticmethod
+    def get_method():
+        return GBTRegressorSpark

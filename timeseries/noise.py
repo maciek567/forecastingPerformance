@@ -18,7 +18,7 @@ class NoisedSeries:
     @staticmethod
     def set_all_noises_strength(all_noises_strength: dict):
         return all_noises_strength if all_noises_strength is not None \
-            else {DeviationScale.SLIGHTLY: 0.4, DeviationScale.MODERATELY: 1.0, DeviationScale.HIGHLY: 3.0}
+            else {DeviationScale.SLIGHTLY: 0.7, DeviationScale.MODERATELY: 1.7, DeviationScale.HIGHLY: 4.0}
 
     def set_all_noised_series(self):
         self.model.all_deviated_series[DeviationSource.NOISE] = \
@@ -52,7 +52,7 @@ class NoisedSeries:
 
     def add_noise(self, data: Series, power: float) -> Series:
         mean = 0
-        std_dev = power
+        std_dev = 0.01 * power * (max(data) - min(data))
         noise = np.random.normal(mean, std_dev, self.model.data_size)
         return data + noise
 
