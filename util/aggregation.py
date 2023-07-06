@@ -7,6 +7,10 @@ from predictions.model import avg_rmse_label, deviations_source_label, deviation
     deviations_mitigation_label, avg_time_label, std_dev_time_label, avg_mitigation_time_label, avg_mape_label, \
     avg_mae_label
 
+avg_time_prepare_label = "Time - prepare data"
+avg_time_model_label = "Time - training model"
+avg_time_prediction_label = "Time - prediction"
+
 
 def aggregate_results():
     results = collect_data_from_files()
@@ -15,9 +19,15 @@ def aggregate_results():
     save_aggregation_to_file(df, name)
 
 
+def split_times(series, number):
+    return Series([[float(time) for time in times.split(" + ")][number] for times in series[avg_time_label]])
+
+
 def collect_data_from_files():
     results = {
-        avg_time_label: [],
+        avg_time_prepare_label: [],
+        avg_time_model_label: [],
+        avg_time_prediction_label: [],
         std_dev_time_label: [],
         avg_mitigation_time_label: [],
         avg_rmse_label: [],
@@ -27,7 +37,9 @@ def collect_data_from_files():
     for file_name in os.listdir(prediction_path):
         if file_name.endswith(".csv"):
             series = read_csv(prediction_path + file_name)
-            results[avg_time_label].append(series[avg_time_label])
+            results[avg_time_prepare_label].append(split_times(series, 0))
+            results[avg_time_model_label].append(split_times(series, 1))
+            results[avg_time_prediction_label].append(split_times(series, 2))
             results[std_dev_time_label].append(series[std_dev_time_label])
             results[avg_mitigation_time_label].append(series[avg_mitigation_time_label])
             results[avg_rmse_label].append(series[avg_rmse_label])
@@ -47,12 +59,18 @@ def calculate_averages(results):
             ["N", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "N", "N"])}
 
     averages = {label: sum(results[label]) / len(results[label]) for label in
-                [avg_time_label, std_dev_time_label, avg_mitigation_time_label,
+                [avg_time_prepare_label, avg_time_model_label, avg_time_prediction_label,
+                 std_dev_time_label, avg_mitigation_time_label,
                  avg_rmse_label, avg_mae_label, avg_mape_label]}
-
+    times = {avg_time_label: averages[avg_time_prepare_label].round(2).astype(str) + " + " +
+                             averages[avg_time_model_label].round(2).astype(str) + " + " +
+                             averages[avg_time_prediction_label].round(2).astype(str)}
+    aggregated.update(times)
     aggregated.update(averages)
 
-    return DataFrame(aggregated)
+    df = DataFrame(aggregated)
+    df = df.drop(columns=[avg_time_prepare_label, avg_time_model_label, avg_time_prediction_label])
+    return df
 
 
 def determine_name():

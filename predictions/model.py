@@ -79,42 +79,39 @@ class PredictionModel:
                            spark=self.spark)
 
     def create_model_deviated_set(self):
-        return {deviation_source: self.create_model_deviated(deviation_source) for deviation_source in
-                self.deviations_sources}
+        return {deviation_source: {deviation_scale: self.create_model_deviated(deviation_source, deviation_scale)
+                                   for deviation_scale in self.deviations_scale}
+                for deviation_source in self.deviations_sources}
 
     def create_model_mitigated_set(self):
-        return {deviation_source: self.create_model_mitigated(deviation_source) for deviation_source in
-                self.deviation_mitigation_sources}
+        return {deviation_source: {deviation_scale: self.create_model_mitigated(deviation_source, deviation_scale)
+                                   for deviation_scale in self.deviations_scale}
+                for deviation_source in self.deviation_mitigation_sources}
 
-    def create_model_deviated(self, source: DeviationSource):
-        return {deviation_scale:
-            self.method(
-                prices=self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
-                real_prices=self.stock.real_series[self.column] if source is not DeviationSource.TIMELINESS else
-                self.get_series_deviated(self.deviation_range)[source][deviation_scale][self.column],
-                prediction_border=self.prediction_start,
-                prediction_delay=self.stock.obsolescence.obsolescence_scale[
-                    deviation_scale] if source == DeviationSource.TIMELINESS else 0,
-                column=self.column,
-                deviation=source,
-                scale=deviation_scale,
-                spark=self.spark)
-            for deviation_scale in self.deviations_scale}
+    def create_model_deviated(self, source: DeviationSource, scale: DeviationScale):
+        return self.method(
+            prices=self.get_series_deviated(self.deviation_range)[source][scale][self.column],
+            real_prices=self.stock.real_series[self.column] if source is not DeviationSource.TIMELINESS else
+            self.get_series_deviated(self.deviation_range)[source][scale][self.column],
+            prediction_border=self.prediction_start,
+            prediction_delay=self.stock.obsolescence.obsolescence_scale[
+                scale] if source == DeviationSource.TIMELINESS else 0,
+            column=self.column,
+            deviation=source,
+            scale=scale,
+            spark=self.spark)
 
-    def create_model_mitigated(self, source: DeviationSource):
-        return {deviation_scale:
-            self.method(
-                prices=self.stock.mitigated_deviations_series[source][deviation_scale][self.column][Mitigation.DATA],
-                mitigation_time=self.stock.mitigated_deviations_series[source][deviation_scale][self.column][
-                    Mitigation.TIME],
-                real_prices=self.stock.real_series[self.column],
-                prediction_border=self.prediction_start,
-                prediction_delay=0,
-                column=self.column,
-                deviation=source,
-                scale=deviation_scale,
-                spark=self.spark)
-            for deviation_scale in self.deviations_scale}
+    def create_model_mitigated(self, source: DeviationSource, scale: DeviationScale):
+        return self.method(
+            prices=self.stock.mitigated_deviations_series[source][scale][self.column][Mitigation.DATA],
+            mitigation_time=self.stock.mitigated_deviations_series[source][scale][self.column][Mitigation.TIME],
+            real_prices=self.stock.real_series[self.column],
+            prediction_border=self.prediction_start,
+            prediction_delay=0,
+            column=self.column,
+            deviation=source,
+            scale=scale,
+            spark=self.spark)
 
     def get_series_deviated(self, deviation_range: DeviationRange):
         series_deviated = None

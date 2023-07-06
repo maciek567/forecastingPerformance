@@ -2,7 +2,7 @@ import gc
 import time
 
 from numpy import ndarray
-from pandas import Series, concat
+from pandas import Series
 
 from predictions import utils
 from timeseries.enums import DeviationSource, SeriesColumn, DeviationScale
