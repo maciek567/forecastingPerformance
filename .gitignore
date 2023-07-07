@@ -139,3 +139,6 @@ secrets/vault.json
 
 # generated data
 data/
+
+# NN temporary files
+run/lightning_logs/

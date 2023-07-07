@@ -1,6 +1,8 @@
 import time
 
 import numpy as np
+from neuralforecast import NeuralForecast
+from neuralforecast.auto import AutoNHITS
 from numpy import ndarray
 from pandas import Series, DataFrame
 from pyEsn.ESN import ESN
@@ -11,6 +13,7 @@ from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
 from predictions.prediction import Prediction, PredictionStats, PredictionResults
+from predictions.utils import prepare_sf_dataframe
 from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
 
 
@@ -126,3 +129,41 @@ class XGBoost(Prediction):
     @staticmethod
     def get_method():
         return XGBoost
+
+
+class NHits(Prediction):
+    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
+                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
+                 spark=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
+                         mitigation_time, spark)
+
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
+        return super().execute_and_measure(self.extrapolate, params)
+
+    def extrapolate(self, params: dict) -> PredictionResults:
+        df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
+        df = df.drop(columns=["ds"])
+        df = df.reset_index()
+        df = df.rename(columns={"index": "ds"})
+
+        start_time = time.perf_counter_ns()
+        config = dict(max_steps=2, val_check_steps=1, input_size=12,
+                      mlp_units=3 * [[8, 8]])
+        nf = NeuralForecast(
+            models=[AutoNHITS(h=self.predict_size, config=config, num_samples=1)],
+            freq='D'
+        )
+        nf.fit(df=df)
+        fit_time = time.perf_counter_ns()
+
+        extrapolation = nf.predict()
+        prediction_time = time.perf_counter_ns()
+
+        result = extrapolation.values[:, 1]
+        return PredictionResults(results=result, start_time=start_time, model_time=fit_time,
+                                 prediction_time=prediction_time)
+
+    @staticmethod
+    def get_method():
+        return NHits

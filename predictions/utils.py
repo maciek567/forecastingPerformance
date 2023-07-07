@@ -36,14 +36,14 @@ def method_name(method) -> str:
     return str(method)[str(method).index(".") + 1: -2].split(".")[-1]
 
 
-def prepare_sf_dataframe(data_to_learn, training_set_end):
-    series_id = [0 for i in range(0, training_set_end)]
+def prepare_sf_dataframe(data_to_learn, training_size) -> DataFrame:
+    series_id = [0 for i in range(0, training_size)]
     return pd.DataFrame({"ds": data_to_learn.keys(), "y": data_to_learn.values, "unique_id": series_id})
 
 
-def prepare_spark_dataframe(series, spark):
-    series['unique_id'] = series['unique_id'].astype(str)
-    return spark.createDataFrame(series)
+def prepare_spark_dataframe(df, spark):
+    df['unique_id'] = df['unique_id'].astype(str)
+    return spark.createDataFrame(df)
 
 
 def plot_extrapolation(model, result: ndarray, company_name: str, save_file: bool = False) -> None:

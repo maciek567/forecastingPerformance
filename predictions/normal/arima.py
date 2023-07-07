@@ -103,14 +103,14 @@ class AutoArimaSF(ArimaPrediction):
         return super().execute_and_measure(self.extrapolate, params)
 
     def extrapolate(self, params: dict) -> PredictionResults:
-        series = prepare_sf_dataframe(self.data_to_learn, self.training_size)
+        df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
 
         start_time = time.perf_counter_ns()
         sf = StatsForecast(
             models=[AutoARIMA(seasonal=False, max_order=8, start_p=4, start_q=4)],
             freq='D',
         )
-        sf.fit(df=series)
+        sf.fit(df=df)
         fit_time = time.perf_counter_ns()
 
         extrapolation = sf.predict(h=self.predict_size)

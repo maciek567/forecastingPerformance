@@ -27,8 +27,8 @@ class CesSpark(Prediction):
         )
 
     def extrapolate(self, params: dict) -> PredictionResults:
-        series = prepare_sf_dataframe(self.data_to_learn, self.training_size)
-        sdf = prepare_spark_dataframe(series, self.spark)
+        df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
+        sdf = prepare_spark_dataframe(df, self.spark)
 
         start_time = time.perf_counter_ns()
         sf_fit = self.create_model()
