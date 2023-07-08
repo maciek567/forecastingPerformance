@@ -1,21 +1,20 @@
 import time
 
 import numpy as np
-from pandas import Series
 from statsforecast import StatsForecast
 from statsforecast.models import (AutoCES, GARCH, ARCH)
 
 from predictions.prediction import Prediction, PredictionStats, PredictionResults
-from predictions.utils import prepare_sf_dataframe
-from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
+from predictions.utils import prepare_sf_dataframe, extract_predictions
+from timeseries.enums import DeviationSource, DeviationScale
 
 
 class Ces(Prediction):
-    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
-                 spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
-                         mitigation_time, spark)
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark, weights=weights)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
@@ -34,17 +33,21 @@ class Ces(Prediction):
         extrapolation = sf.predict(h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
-        result = extrapolation.values[:, 1]
+        result = extract_predictions(extrapolation, "CES")
         return PredictionResults(results=result,
                                  start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
+    @staticmethod
+    def get_method():
+        return Ces
+
 
 class Garch(Prediction):
-    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
-                 spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
-                         mitigation_time, spark)
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark, weights=weights)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)

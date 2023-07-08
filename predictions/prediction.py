@@ -1,15 +1,15 @@
 import gc
 import time
 
-from numpy import ndarray
 from pandas import Series
 
 from predictions import utils
-from timeseries.enums import DeviationSource, SeriesColumn, DeviationScale
+from predictions.utils import normalized_columns_weights
+from timeseries.enums import DeviationSource, DeviationScale
 
 
 class PredictionResults:
-    def __init__(self, results: ndarray, parameters: tuple = None,
+    def __init__(self, results: dict, parameters: tuple = None,
                  start_time: float = 0.0, model_time: float = 0.0, prediction_time: float = 0.0):
         self.results = results
         self.parameters = parameters
@@ -32,38 +32,44 @@ class PredictionStats:
 
 
 class Prediction:
-    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
-                 spark=None):
-        self.data_with_defects = prices[:prediction_border].values
-        self.data_to_learn = prices[:prediction_border].dropna()
-        self.training_size = len(self.data_to_learn)
+    def __init__(self, prices_dict: dict, real_prices_dict: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time_dict: dict = None,
+                 spark=None, weights: dict = None):
+        self.data_with_defects = {column: prices[:prediction_border].values for column, prices in prices_dict.items()}
+        self.data_to_learn = {column: prices[:prediction_border].dropna() for column, prices in prices_dict.items()}
+        self.training_size = len(list(self.data_to_learn.values())[0])
         self.prediction_border = prediction_border
         self.prediction_delay = prediction_delay
         self.prediction_start = prediction_border + prediction_delay
-        self.data_to_validate = Series(real_prices.values[self.prediction_start:])
-        self.actual_data = real_prices
-        self.predict_size = len(self.data_to_validate)
+        self.data_to_validate = {column: Series(real_prices.values[self.prediction_start:]) for column, real_prices in
+                                 real_prices_dict.items()}
+        self.actual_data = real_prices_dict
+        self.predict_size = len(list(self.data_to_validate.values())[0])
         self.train_and_pred_size = self.training_size + self.predict_size
-        self.column = column
+        self.columns = columns
+        self.weights = weights
         self.deviation = deviation
         self.scale = scale
-        self.mitigation_time = mitigation_time
+        self.mitigation_time = mitigation_time_dict
         self.spark = spark
 
     def execute_and_measure(self, extrapolation_method, params: dict) -> PredictionStats:
         gc.disable()
         start_time = time.perf_counter_ns()
-        prediction = extrapolation_method(params)
+        extrapolation = extrapolation_method(params)
         elapsed_time = time.perf_counter_ns()
         gc.enable()
 
-        rmse = utils.calculate_rmse(self.data_to_validate.values, prediction.results)
-        mae = utils.calculate_mae(self.data_to_validate.values, prediction.results)
-        mape = utils.calculate_mape(self.data_to_validate.values, prediction.results)
-        results = PredictionStats(parameters=prediction.parameters,
+        weights = normalized_columns_weights(self.columns, self.weights)
+        rmse, mae, mape = 0.0, 0.0, 0.0
+        for column, series in self.data_to_validate.items():
+            rmse += utils.calculate_rmse(series, extrapolation.results[column]) * weights[column]
+            mae += utils.calculate_mae(series, extrapolation.results[column]) * weights[column]
+            mape += utils.calculate_mape(series, extrapolation.results[column]) * weights[column]
+
+        results = PredictionStats(parameters=extrapolation.parameters,
                                   start_time=start_time, elapsed_time=elapsed_time,
-                                  model_time=prediction.model_time, prediction_time=prediction.prediction_time,
+                                  model_time=extrapolation.model_time, prediction_time=extrapolation.prediction_time,
                                   rmse=rmse, mae=mae, mape=mape)
 
         return results

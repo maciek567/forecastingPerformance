@@ -1,20 +1,19 @@
 import time
 
-from pandas import Series
 from statsforecast.core import StatsForecast
 from statsforecast.models import AutoARIMA
 
 from predictions.prediction import Prediction, PredictionStats, PredictionResults
-from predictions.utils import prepare_sf_dataframe, prepare_spark_dataframe
-from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
+from predictions.utils import prepare_sf_dataframe, prepare_spark_dataframe, extract_predictions
+from timeseries.enums import DeviationSource, DeviationScale
 
 
 class ArimaPrediction(Prediction):
-    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
-                 spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
-                         mitigation_time, spark=spark)
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark=spark, weights=weights)
 
     @staticmethod
     def print_elapsed_time(elapsed_time: float):
@@ -22,11 +21,11 @@ class ArimaPrediction(Prediction):
 
 
 class AutoArimaSpark(ArimaPrediction):
-    def __init__(self, prices: Series, real_prices: Series, prediction_border: int, prediction_delay: int,
-                 column: SeriesColumn, deviation: DeviationSource, scale: DeviationScale, mitigation_time: int = 0,
-                 spark=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, column, deviation, scale,
-                         mitigation_time, spark)
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark, weights=weights)
 
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
@@ -52,7 +51,7 @@ class AutoArimaSpark(ArimaPrediction):
         extrapolation = sf.forecast(df=sdf, h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
-        result = extrapolation.toPandas()["AutoARIMA"]
+        result = extract_predictions(extrapolation.toPandas(), "AutoARIMA")
         return PredictionResults(results=result, parameters=params,
                                  start_time=start_time, model_time=fit_time,
                                  prediction_time=prediction_time - (fit_time - start_time))

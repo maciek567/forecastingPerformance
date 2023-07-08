@@ -10,7 +10,7 @@ from inout.paths import prediction_path
 from predictions import utils
 from predictions.conditions import do_method_return_extra_params
 from predictions.spark import handle_spark
-from timeseries.enums import SeriesColumn, sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
+from timeseries.enums import sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
 deviations_source_label = "Deviation"
@@ -27,13 +27,13 @@ additional_parameters_label = "(p,q)"
 
 class PredictionModel:
 
-    def __init__(self, stock: StockMarketSeries, prediction_start: int, column: SeriesColumn,
+    def __init__(self, stock: StockMarketSeries, prediction_start: int, columns: list,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
                  is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
                  unique_ids: bool = False):
         self.stock = stock
         self.prediction_start = prediction_start
-        self.column = column
+        self.columns = columns
         self.deviation_range = deviation_range
         self.deviations_sources = deviation_sources if deviation_sources is not None \
             else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
@@ -69,14 +69,15 @@ class PredictionModel:
         return self
 
     def create_model_real(self):
-        return self.method(prices=self.stock.real_series[self.column],
-                           real_prices=self.stock.real_series[self.column],
+        return self.method(prices={column: self.stock.real_series[column] for column in self.columns},
+                           real_prices={column: self.stock.real_series[column] for column in self.columns},
                            prediction_border=self.prediction_start,
                            prediction_delay=0,
-                           column=self.column,
+                           columns=self.columns,
                            deviation=DeviationSource.NONE,
                            scale=None,
-                           spark=self.spark)
+                           spark=self.spark,
+                           weights=self.stock.weights)
 
     def create_model_deviated_set(self):
         return {deviation_source: {deviation_scale: self.create_model_deviated(deviation_source, deviation_scale)
@@ -90,28 +91,34 @@ class PredictionModel:
 
     def create_model_deviated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices=self.get_series_deviated(self.deviation_range)[source][scale][self.column],
-            real_prices=self.stock.real_series[self.column] if source is not DeviationSource.TIMELINESS else
-            self.get_series_deviated(self.deviation_range)[source][scale][self.column],
+            prices={column: self.get_series_deviated(self.deviation_range)[source][scale][column] for column in
+                    self.columns},
+            real_prices={column: self.stock.real_series[column] for column in
+                         self.columns} if source is not DeviationSource.TIMELINESS else
+            {column: self.get_series_deviated(self.deviation_range)[source][scale][column] for column in self.columns},
             prediction_border=self.prediction_start,
             prediction_delay=self.stock.obsolescence.obsolescence_scale[
                 scale] if source == DeviationSource.TIMELINESS else 0,
-            column=self.column,
+            columns=self.columns,
             deviation=source,
             scale=scale,
-            spark=self.spark)
+            spark=self.spark,
+            weights=self.stock.weights)
 
     def create_model_mitigated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices=self.stock.mitigated_deviations_series[source][scale][self.column][Mitigation.DATA],
-            mitigation_time=self.stock.mitigated_deviations_series[source][scale][self.column][Mitigation.TIME],
-            real_prices=self.stock.real_series[self.column],
+            prices={column: self.stock.mitigated_deviations_series[source][scale][column][Mitigation.DATA] for column in
+                    self.columns},
+            mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][Mitigation.TIME] for
+                             column in self.columns},
+            real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
             prediction_delay=0,
-            column=self.column,
+            columns=self.columns,
             deviation=source,
             scale=scale,
-            spark=self.spark)
+            spark=self.spark,
+            weights=self.stock.weights)
 
     def get_series_deviated(self, deviation_range: DeviationRange):
         series_deviated = None
@@ -132,8 +139,8 @@ class PredictionModel:
         else:
             model = self.model_mitigated[source][scale]
         try:
-            prediction_stats = model.extrapolate(self.additional_params)
-            utils.plot_extrapolation(model, prediction_stats.results, self.stock.company_name, save_file=save_file)
+            prediction_results = model.extrapolate(self.additional_params)
+            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name, save_file=save_file)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 
@@ -167,7 +174,8 @@ class PredictionModel:
                     result = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
                 else:
                     result = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
-                    result.mitigation_time = self.model_mitigated[source][scale].mitigation_time
+                    mitigation_time_dict = self.model_mitigated[source][scale].mitigation_time
+                    result.mitigation_time = sum([time for time in mitigation_time_dict.values()])
                 results.append(result)
             except Exception as e:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
@@ -194,7 +202,7 @@ class PredictionModel:
     def manage_output(self, results: DataFrame, save_file: bool) -> None:
         pd.set_option("display.precision", 2)
         header = \
-            f"Statistics [{self.stock.company_name} stock, {self.column.value} price, {self.iterations} iterations]\n"
+            f"Statistics [{self.stock.company_name} stock, {','.join(column.value for column in self.columns)} prices, {self.iterations} iterations]\n"
         text = results.to_string()
         latex = results.to_latex(index=False,
                                  formatters={"name": str.upper},
@@ -204,7 +212,7 @@ class PredictionModel:
         else:
             os.makedirs(prediction_path, exist_ok=True)
             values_to_predict = self.stock.data_size - self.prediction_start
-            path = f"{prediction_path}{self.stock.company_name}_{self.column.value}_{utils.method_name(self.method)}_{values_to_predict}"
+            path = f"{prediction_path}{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{values_to_predict}"
             if self.unique_ids:
                 path += f"_{uuid.uuid4()}"
             results.to_csv(path + ".csv")
