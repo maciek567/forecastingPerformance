@@ -17,6 +17,15 @@ class PredictionResults:
         self.prediction_time = (prediction_time - model_time) / 1e6
 
 
+class PredictionResSimple:
+    def __init__(self, results: dict, parameters: tuple = None,
+                 model_time: float = 0.0, prediction_time: float = 0.0):
+        self.results = results
+        self.parameters = parameters
+        self.model_time = model_time
+        self.prediction_time = prediction_time
+
+
 class PredictionStats:
     def __init__(self, parameters: tuple = None, start_time: float = 0.0,
                  elapsed_time: float = 0.0, model_time: float = 0.0, prediction_time: float = 0.0,
@@ -37,7 +46,7 @@ class Prediction:
                  spark=None, weights: dict = None):
         self.data_with_defects = {column: prices[:prediction_border].values for column, prices in prices_dict.items()}
         self.data_to_learn = {column: prices[:prediction_border].dropna() for column, prices in prices_dict.items()}
-        self.training_size = len(list(self.data_to_learn.values())[0])
+        self.training_size = {column: len(prices.values) for column, prices in self.data_to_learn.items()}
         self.prediction_border = prediction_border
         self.prediction_delay = prediction_delay
         self.prediction_start = prediction_border + prediction_delay
@@ -45,7 +54,7 @@ class Prediction:
                                  real_prices_dict.items()}
         self.actual_data = real_prices_dict
         self.predict_size = len(list(self.data_to_validate.values())[0])
-        self.train_and_pred_size = self.training_size + self.predict_size
+        self.train_and_pred_size = {column: self.training_size[column] + self.predict_size for column in columns}
         self.columns = columns
         self.weights = weights
         self.deviation = deviation
@@ -63,9 +72,9 @@ class Prediction:
         weights = normalized_columns_weights(self.columns, self.weights)
         rmse, mae, mape = 0.0, 0.0, 0.0
         for column, series in self.data_to_validate.items():
-            rmse += utils.calculate_rmse(series, extrapolation.results[column]) * weights[column]
-            mae += utils.calculate_mae(series, extrapolation.results[column]) * weights[column]
-            mape += utils.calculate_mape(series, extrapolation.results[column]) * weights[column]
+            rmse += utils.calculate_rmse(series.values, extrapolation.results[column].values) * weights[column]
+            mae += utils.calculate_mae(series.values, extrapolation.results[column].values) * weights[column]
+            mape += utils.calculate_mape(series.values, extrapolation.results[column].values) * weights[column]
 
         results = PredictionStats(parameters=extrapolation.parameters,
                                   start_time=start_time, elapsed_time=elapsed_time,

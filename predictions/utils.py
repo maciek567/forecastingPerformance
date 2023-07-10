@@ -51,7 +51,7 @@ def get_column_by_id(column_id):
 def prepare_sf_dataframe(data_to_learn_dict, training_size) -> DataFrame:
     df = pd.DataFrame(columns=["ds", "y", "unique_id"])
     for column, series in data_to_learn_dict.items():
-        series_id = [unique_ids_mapping[column] for i in range(0, training_size)]
+        series_id = [unique_ids_mapping[column] for i in range(0, training_size[column])]
         df = pd.concat([df, pd.DataFrame({"ds": series.keys(), "y": series.values, "unique_id": series_id})])
     return df
 

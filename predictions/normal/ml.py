@@ -12,7 +12,7 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from xgboost import XGBRegressor
 
-from predictions.prediction import Prediction, PredictionStats, PredictionResults
+from predictions.prediction import Prediction, PredictionStats, PredictionResults, PredictionResSimple
 from predictions.utils import prepare_sf_dataframe, extract_predictions
 from timeseries.enums import DeviationSource, DeviationScale
 
@@ -27,29 +27,37 @@ class Reservoir(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> PredictionResults:
+    def extrapolate(self, params: dict) -> PredictionResSimple:
         n_reservoir = 500
         sparsity = 0.2
         rand_seed = 23
         spectral_radius = 1.2
         noise = .0005
+        res_dict = {}
 
-        start_time = time.perf_counter_ns()
-        esn = ESN(n_inputs=1,
-                  n_outputs=1,
-                  n_reservoir=n_reservoir,
-                  sparsity=sparsity,
-                  random_state=rand_seed,
-                  spectral_radius=spectral_radius,
-                  noise=noise)
-        esn.fit(np.ones(self.training_size), self.data_to_learn.values)
-        fit_time = time.perf_counter_ns()
+        for column in self.columns:
+            start_time = time.perf_counter_ns()
+            esn = ESN(n_inputs=1,
+                      n_outputs=1,
+                      n_reservoir=n_reservoir,
+                      sparsity=sparsity,
+                      random_state=rand_seed,
+                      spectral_radius=spectral_radius,
+                      noise=noise)
+            esn.fit(np.ones(self.training_size[column]), self.data_to_learn[column].values)
+            fit_time = time.perf_counter_ns()
 
-        prediction = esn.predict(np.ones(self.predict_size))
-        prediction_time = time.perf_counter_ns()
+            prediction = esn.predict(np.ones(self.predict_size))
+            prediction_time = time.perf_counter_ns()
+            result = Series([pred[0] for pred in prediction])
 
-        return PredictionResults(results=prediction,
-                                 start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
+            res_dict[column] = PredictionResults(results=result,
+                                                 start_time=start_time, model_time=fit_time,
+                                                 prediction_time=prediction_time)
+
+        return PredictionResSimple(results={column: results.results for column, results in res_dict.items()},
+                                   model_time=sum([results.model_time for results in res_dict.values()]),
+                                   prediction_time=sum([results.prediction_time for results in res_dict.values()]))
 
     @staticmethod
     def get_method():
