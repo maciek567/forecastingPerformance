@@ -6,14 +6,16 @@ from statistics import mean, stdev
 import pandas as pd
 from pandas import DataFrame, concat
 
-from inout.paths import prediction_path
+from inout.intermediate import IntermediateProvider
+from inout.paths import pred_stats_csv_path, pred_results_path, pred_stats_tex_path
 from predictions import utils
 from predictions.conditions import do_method_return_extra_params
 from predictions.spark import handle_spark
 from timeseries.enums import sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
-deviations_source_label = "Deviation"
+number_label = "Num."
+deviations_source_label = "Dev."
 deviations_scale_label = "Scale"
 deviations_mitigation_label = "Improve"
 avg_time_label = "Time [ms]"
@@ -30,7 +32,7 @@ class PredictionModel:
     def __init__(self, stock: StockMarketSeries, prediction_start: int, columns: list,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
                  is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
-                 unique_ids: bool = False):
+                 unique_ids: bool = False, is_save_predictions: bool = False):
         self.stock = stock
         self.prediction_start = prediction_start
         self.columns = columns
@@ -49,6 +51,7 @@ class PredictionModel:
         self.model_mitigated = None
         self.spark = None
         self.unique_ids = unique_ids
+        self.is_save_predictions = is_save_predictions
 
     def get_deviation_mitigation_sources(self) -> list:
         if self.is_deviation_mitigation:
@@ -145,38 +148,41 @@ class PredictionModel:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 
     def compute_statistics_set(self, save_file=False) -> None:
-        self.compute_statistics(DeviationSource.NONE)
-        real = self.compute_statistics(DeviationSource.NONE)
+        self.compute_statistics(0, DeviationSource.NONE)
+        real = self.compute_statistics(1, DeviationSource.NONE)
         results = DataFrame([real])
 
+        number = 1
         for deviation_source in self.deviations_sources:
             for deviation_scale in self.deviations_scale:
-                deviated = self.compute_statistics(deviation_source, deviation_scale, mitigation=False)
+                number += 1
+                deviated = self.compute_statistics(number, deviation_source, deviation_scale, mitigation=False)
                 if deviated:
                     results = concat([results, DataFrame([deviated])], ignore_index=True)
                 if self.is_deviation_mitigation and deviation_source in self.deviation_mitigation_sources:
-                    mitigated = self.compute_statistics(deviation_source, deviation_scale, mitigation=True)
+                    number += 1
+                    mitigated = self.compute_statistics(number, deviation_source, deviation_scale, mitigation=True)
                     if mitigated:
                         results = concat([results, DataFrame([mitigated])], ignore_index=True)
 
         self.manage_output(results, save_file)
 
-    def compute_statistics(self, source: DeviationSource, scale: DeviationScale = None,
+    def compute_statistics(self, number: int, source: DeviationSource, scale: DeviationScale = None,
                            mitigation: bool = False) -> dict:
         results = []
 
         for j in range(self.iterations):
-            result = None
+            stats = None
             try:
                 if source is DeviationSource.NONE:
-                    result = self.model_real.extrapolate_and_measure(self.additional_params)
+                    stats = self.model_real.extrapolate_and_measure(self.additional_params)
                 elif not mitigation:
-                    result = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
+                    stats = self.model_deviated[source][scale].extrapolate_and_measure(self.additional_params)
                 else:
-                    result = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
+                    stats = self.model_mitigated[source][scale].extrapolate_and_measure(self.additional_params)
                     mitigation_time_dict = self.model_mitigated[source][scale].mitigation_time
-                    result.mitigation_time = sum([time for time in mitigation_time_dict.values()])
-                results.append(result)
+                    stats.mitigation_time = sum([time for time in mitigation_time_dict.values()])
+                results.append(stats)
             except Exception as e:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
 
@@ -184,6 +190,7 @@ class PredictionModel:
         display = "{:.2f}"
         if results:
             dict_result = {
+                number_label: number,
                 deviations_source_label: sources_short()[source],
                 deviations_scale_label: scales_short()[scale],
                 deviations_mitigation_label: mitigation_short()[mitigation],
@@ -197,7 +204,21 @@ class PredictionModel:
                 params = results[0].parameters
                 p_q = f"({params[0]},{params[1]})"
                 dict_result[additional_parameters_label] = p_q
+        self.save_predictions(results, source, scale)
         return dict_result
+
+    def save_predictions(self, results, source, scale) -> None:
+        os.makedirs(pred_results_path, exist_ok=True)
+        if self.is_save_predictions:
+            avg_results = {}
+            for column in self.columns:
+                avg_results[column.value] = sum([stats.results[column].values for stats in results]) / len(results)
+            df = DataFrame(avg_results)
+            values_to_predict = self.stock.data_size - self.prediction_start
+            deviation = f'{source.value}' + (f'_{scale.value}' if scale is not None else "")
+            file_name = f"{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{deviation}_{values_to_predict}"
+            path = os.path.join(pred_results_path, file_name) + ".csv"
+            df.to_csv(path)
 
     def manage_output(self, results: DataFrame, save_file: bool) -> None:
         pd.set_option("display.precision", 2)
@@ -210,13 +231,13 @@ class PredictionModel:
         if not save_file:
             print(header + "\n" + text + "\n\n" + latex)
         else:
-            os.makedirs(prediction_path, exist_ok=True)
+            os.makedirs(pred_stats_csv_path, exist_ok=True)
+            os.makedirs(pred_stats_tex_path, exist_ok=True)
             values_to_predict = self.stock.data_size - self.prediction_start
-            path = f"{prediction_path}{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{values_to_predict}"
+            file_name = f"{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{values_to_predict}"
             if self.unique_ids:
-                path += f"_{uuid.uuid4()}"
-            results.to_csv(path + ".csv")
-
-            latex_file = open(path + ".tex", "w")
-            latex_file.write(latex)
-            latex_file.close()
+                file_name += f"_{uuid.uuid4()}"
+            csv_path = os.path.join(pred_stats_csv_path, file_name)
+            tex_path = os.path.join(pred_stats_tex_path, file_name)
+            results.to_csv(csv_path + ".csv")
+            IntermediateProvider().save_as_latex(tex_path, latex)

@@ -6,6 +6,7 @@ from numpy import ndarray
 from numpy import sqrt, mean
 from pandas import Series, DataFrame
 
+from inout.paths import pred_graphs_path
 from timeseries.enums import DeviationSource, SeriesColumn
 from util.graphs import TIME_DAYS_LABEL, PRICE_USD_LABEL
 
@@ -93,9 +94,10 @@ def plot_extrapolation(model, result: dict, company_name: str, save_file: bool =
     plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
     if save_file:
+        os.makedirs(pred_graphs_path, exist_ok=True)
         deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
         name = f"{company_name}_{'_'.join([column.value for column in model.columns])}_{method}_{deviation}_{model.predict_size}"
-        path = os.path.join('..', 'data', 'predictions', name)
+        path = os.path.join(pred_graphs_path, name)
         plt.savefig(f"{path}.pdf", bbox_inches='tight')
     plt.show()
 

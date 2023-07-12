@@ -46,9 +46,9 @@ for company_name in company_names:
 
     base_model = PredictionModel(stock, prediction_start, columns, iterations=iterations, unique_ids=unique_ids,
                                  deviation_sources=sources, deviation_scale=scales,
-                                 is_deviation_mitigation=is_mitigation)
+                                 is_deviation_mitigation=is_mitigation, is_save_predictions=True)
     for method in methods:
-        model = base_model.configure_model(method, optimize=False)
+        model = base_model.configure_model(method)
 
         model.plot_prediction(source=DeviationSource.NONE, save_file=True)
         # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)

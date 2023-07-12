@@ -3,6 +3,8 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 
+from inout.paths import metrics_path
+
 TIME_DAYS_LABEL = "Time, days"
 PRICE_USD_LABEL = "Price, USD"
 
@@ -17,7 +19,8 @@ def save_image(plt, title):
     matplotlib.rcParams["font.serif"] = "courier"
     matplotlib.rcParams["font.size"] = 11
 
-    path = os.path.join('..', 'data', 'graphs', title.replace(' ', '_').replace(',', ''))
+    path = os.path.join(metrics_path, title.replace(' ', '_').replace(',', ''))
+    os.makedirs(metrics_path, exist_ok=True)
     plt.savefig(f"{path}.pdf", bbox_inches='tight')
 
 

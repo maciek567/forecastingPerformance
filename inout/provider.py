@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import yfinance as yf
@@ -25,7 +26,7 @@ class YFinanceProvider:
 
     @staticmethod
     def get_csv_path(name: str) -> str:
-        return stock_path + name + ".csv"
+        return os.path.join(stock_path, name) + ".csv"
 
     @staticmethod
     def get_first_dates_sorted(companies: dict) -> list:

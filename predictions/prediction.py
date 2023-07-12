@@ -27,9 +27,10 @@ class PredictionResSimple:
 
 
 class PredictionStats:
-    def __init__(self, parameters: tuple = None, start_time: float = 0.0,
+    def __init__(self, results: dict, parameters: tuple = None, start_time: float = 0.0,
                  elapsed_time: float = 0.0, model_time: float = 0.0, prediction_time: float = 0.0,
                  rmse: float = None, mae: float = None, mape: float = None):
+        self.results = results
         self.parameters = parameters
         self.prepare_time = (elapsed_time - start_time) / 1e6 - model_time - prediction_time
         self.model_time = model_time
@@ -76,7 +77,7 @@ class Prediction:
             mae += utils.calculate_mae(series.values, extrapolation.results[column].values) * weights[column]
             mape += utils.calculate_mape(series.values, extrapolation.results[column].values) * weights[column]
 
-        results = PredictionStats(parameters=extrapolation.parameters,
+        results = PredictionStats(results=extrapolation.results, parameters=extrapolation.parameters,
                                   start_time=start_time, elapsed_time=elapsed_time,
                                   model_time=extrapolation.model_time, prediction_time=extrapolation.prediction_time,
                                   rmse=rmse, mae=mae, mape=mape)

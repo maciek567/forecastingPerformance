@@ -16,3 +16,5 @@ stock = StockMarketSeries(company_name, time_series_start, time_series_values,
                                    SeriesColumn.VOLUME: 0.05},
                           obsoleteness_scale=obsolescence_scale,
                           cache=True)
+
+print("DONE")

@@ -25,7 +25,7 @@ class GBTRegressorSpark(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
-    def extrapolate(self, params: dict) -> PredictionStats:
+    def extrapolate(self, params: dict) -> PredictionResults:
         learn_id = self.data_to_learn.select("*").withColumn("id", monotonically_increasing_id())
         validate_id = self.data_to_validate.select("*").withColumn("id",
                                                                    self.train_and_pred_size + monotonically_increasing_id())
@@ -43,7 +43,7 @@ class GBTRegressorSpark(Prediction):
         prediction_time = time.perf_counter_ns()
 
         result = np.array([row[2] for row in result])
-        return PredictionStats(results=result,
+        return PredictionResults(results=result,
                                start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
 
     @staticmethod
