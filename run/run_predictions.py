@@ -1,21 +1,21 @@
 import sys
 
-from predictions.hpc.arimaSpark import AutoArimaSpark
-from predictions.hpc.statisticalSpark import CesSpark
+from predictions.hpc.mlSpark import XGBoostSpark
+from predictions.hpc.statsSpark import AutoArimaSpark, CesSpark
 from predictions.model import PredictionModel
-from predictions.normal.arima import AutoArimaSF
-from predictions.normal.ml import Reservoir, NHits, XGBoost
-from predictions.normal.statistical import Ces, Garch
+from predictions.normal.ml import XGBoost
+from predictions.normal.nn import Reservoir, NHits
+from predictions.normal.stats import AutoArima, Ces, Garch
 from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale
 from timeseries.timeseries import StockMarketSeries
 
 # company_names = ['AMD', 'Accenture', 'Acer', 'Activision', 'Adobe', 'Akamai', 'Alibaba', 'Amazon', 'Apple', 'At&t',
-#                'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
-#               'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
-# methods = [AutoArimaSF, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark]
+#                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
+#                  'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
+# methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
 
-company_names = ["Facebook"]
-columns = [SeriesColumn.LOW, SeriesColumn.HIGH]
+company_names = ["Accenture"]
+columns = [SeriesColumn.CLOSE]
 weights = {SeriesColumn.OPEN: 0.2,
            SeriesColumn.CLOSE: 0.2,
            SeriesColumn.ADJ_CLOSE: 0.25,
@@ -31,7 +31,7 @@ prediction_shifts = {DeviationScale.SLIGHTLY: 5, DeviationScale.MODERATELY: 15, 
 prediction_start = 1500
 iterations = 3
 unique_ids = "--unique_ids" in sys.argv
-methods = [AutoArimaSF]
+methods = [AutoArima]
 sources = [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
 scales = [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
 is_mitigation = True
@@ -51,15 +51,15 @@ for company_name in company_names:
         model = base_model.configure_model(method, optimize=False)
 
         model.plot_prediction(source=DeviationSource.NONE, save_file=True)
-        model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.MODERATELY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.HIGHLY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.MODERATELY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.HIGHLY, mitigation=False, save_file=True)
-        model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.SLIGHTLY, save_file=True)
-        model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.MODERATELY,save_file=True)
-        model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.HIGHLY, save_file=True)
+        # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.MODERATELY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.HIGHLY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.MODERATELY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.INCOMPLETENESS, scale=DeviationScale.HIGHLY, mitigation=False, save_file=True)
+        # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.SLIGHTLY, save_file=True)
+        # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.MODERATELY,save_file=True)
+        # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.HIGHLY, save_file=True)
 
         model.compute_statistics_set(save_file=True)
 

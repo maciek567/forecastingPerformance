@@ -1,10 +1,12 @@
 import time
 
+import numpy as np
 from pandas import Series
 from pmdarima import auto_arima
 from pmdarima.arima import ndiffs
 from statsforecast.core import StatsForecast
 from statsforecast.models import AutoARIMA
+from statsforecast.models import (AutoCES, GARCH)
 from statsmodels.tsa.arima.model import ARIMA
 
 from predictions.prediction import Prediction, PredictionResults, PredictionStats
@@ -12,19 +14,7 @@ from predictions.utils import prepare_sf_dataframe, extract_predictions
 from timeseries.enums import DeviationSource, DeviationScale
 
 
-class ArimaPrediction(Prediction):
-    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
-                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
-                 spark=None, weights=None):
-        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
-                         mitigation_time, spark, weights)
-
-    @staticmethod
-    def print_elapsed_time(elapsed_time: float):
-        print(f"Execution time: {elapsed_time} [ms]")
-
-
-class ManualArima(ArimaPrediction):
+class ManualArima(Prediction):
     def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
                  spark=None, weights=None):
@@ -58,7 +48,7 @@ class ManualArima(ArimaPrediction):
         return ManualArima
 
 
-class AutoArimaPMD(ArimaPrediction):
+class AutoArimaPMD(Prediction):
     def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
                  spark=None, weights=None):
@@ -91,7 +81,7 @@ class AutoArimaPMD(ArimaPrediction):
         return AutoArimaPMD
 
 
-class AutoArimaSF(ArimaPrediction):
+class AutoArima(Prediction):
     def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
                  spark=None, weights=None):
@@ -123,4 +113,92 @@ class AutoArimaSF(ArimaPrediction):
 
     @staticmethod
     def get_method():
-        return AutoArimaSF
+        return AutoArima
+
+
+class Ces(Prediction):
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark, weights=weights)
+
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
+        return super().execute_and_measure(self.extrapolate, params)
+
+    def extrapolate(self, params: dict) -> PredictionResults:
+        df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
+
+        start_time = time.perf_counter_ns()
+        sf = StatsForecast(
+            models=[AutoCES()],
+            freq='D',
+        )
+        sf.fit(df=df)
+        fit_time = time.perf_counter_ns()
+
+        extrapolation = sf.predict(h=self.predict_size)
+        prediction_time = time.perf_counter_ns()
+
+        result = extract_predictions(extrapolation, "CES")
+        return PredictionResults(results=result,
+                                 start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
+
+    @staticmethod
+    def get_method():
+        return Ces
+
+
+class Garch(Prediction):
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+                 columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
+                 spark=None, weights=None):
+        super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
+                         mitigation_time, spark, weights=weights)
+
+    def extrapolate_and_measure(self, params: dict) -> PredictionStats:
+        return super().execute_and_measure(self.extrapolate, params)
+
+    def extrapolate(self, params: dict) -> PredictionResults:
+        df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
+        df['log'] = df['y'].div(df.groupby('unique_id')['y'].shift(1))
+        df['log'] = np.log(df['log'].astype(float))
+        returns = df[['unique_id', 'ds', 'log']]
+        returns = returns.rename(columns={'log': 'y'})
+
+        start_time = time.perf_counter_ns()
+        models = [
+            # ARCH(1),
+            # ARCH(2),
+            # GARCH(1,1),
+            # GARCH(1, 2),
+            # GARCH(2, 1),
+            GARCH(2, 2)
+        ]
+        sf = StatsForecast(
+            df=returns,
+            models=models,
+            freq='D',
+            n_jobs=-1
+        )
+        sf.fit()
+        fit_time = time.perf_counter_ns()
+
+        forecasts = sf.predict(h=self.predict_size)
+        prediction_time = time.perf_counter_ns()
+
+        selected_method = "GARCH(2,2)"
+        garch = forecasts[selected_method]
+        garch = garch.reset_index()
+        garch["exp"] = np.exp(garch[selected_method])
+        results = extract_predictions(garch, "exp")
+        for column in results.keys():
+            # series_to_multiply = self.data_to_learn[column].values[-1] / results[column].values[0]
+            series_to_multiply = self.data_to_learn[column].values[(self.training_size[column] - self.predict_size):]
+            results[column] = results[column].multiply(series_to_multiply)
+        return PredictionResults(results=results,
+                                 start_time=start_time, model_time=fit_time, prediction_time=prediction_time)
+
+    @staticmethod
+    def get_method():
+        return Garch

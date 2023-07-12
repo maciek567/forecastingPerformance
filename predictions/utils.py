@@ -63,6 +63,7 @@ def prepare_spark_dataframe(df, spark):
 
 def extract_predictions(df, results_name) -> dict:
     df = df.reset_index()
+    df["unique_id"] = df["unique_id"].astype(int)
     dfs = dict(tuple(df.groupby("unique_id")))
     return {get_column_by_id(column_id): results[results_name] for column_id, results in dfs.items()}
 

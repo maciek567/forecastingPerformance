@@ -1,6 +1,6 @@
-from predictions.hpc.arimaSpark import AutoArimaSpark
-from predictions.normal.arima import AutoArimaSF
+from predictions.hpc.statsSpark import AutoArimaSpark
+from predictions.normal.stats import AutoArima
 
 
 def do_method_return_extra_params(method):
-    return method == AutoArimaSF or method == AutoArimaSpark
+    return method == AutoArima or method == AutoArimaSpark
