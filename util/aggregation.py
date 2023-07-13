@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from pandas import read_csv, DataFrame, Series
 
@@ -10,6 +11,7 @@ from predictions.model import avg_rmse_label, deviations_source_label, deviation
 avg_time_prepare_label = "Time - prepare data"
 avg_time_model_label = "Time - training model"
 avg_time_prediction_label = "Time - prediction"
+ALL_ROWS_NUMBER = 16
 
 
 def aggregate_results():
@@ -17,10 +19,6 @@ def aggregate_results():
     df = calculate_averages(results)
     name = determine_name()
     save_aggregation_to_file(df, name)
-
-
-def split_times(series, number):
-    return Series([[float(time) for time in times.split(" + ")][number] for times in series[avg_time_label]])
 
 
 def collect_data_from_files():
@@ -35,15 +33,27 @@ def collect_data_from_files():
         avg_mape_label: []}
 
     for file_name in os.listdir(pred_stats_csv_path):
-        series = read_csv(os.path.join(pred_stats_csv_path, file_name))
-        results[avg_time_prepare_label].append(split_times(series, 0))
-        results[avg_time_model_label].append(split_times(series, 1))
-        results[avg_time_prediction_label].append(split_times(series, 2))
-        results[std_dev_time_label].append(series[std_dev_time_label])
-        results[avg_mitigation_time_label].append(series[avg_mitigation_time_label])
-        results[avg_rmse_label].append(series[avg_rmse_label])
-        results[avg_mae_label].append(series[avg_mae_label])
-        results[avg_mape_label].append(series[avg_mape_label])
+        if file_name.endswith(".csv"):
+            series = read_csv(os.path.join(pred_stats_csv_path, file_name))
+            series[avg_time_prepare_label] = split_times(series, 0)
+            series[avg_time_model_label] = split_times(series, 1)
+            series[avg_time_prediction_label] = split_times(series, 2)
+
+            labels = [avg_time_prepare_label, avg_time_model_label, avg_time_prediction_label,
+                      std_dev_time_label, avg_mitigation_time_label,
+                      avg_rmse_label, avg_mae_label, avg_mape_label]
+
+            passed_validation = True
+            for label in labels:
+                if len(series[label].dropna()) != ALL_ROWS_NUMBER:
+                    warnings.warn(f"Skipped file: {file_name}, because it does not contain values for row: {label}.")
+                    passed_validation = False
+                    break
+
+            if passed_validation:
+                for label in labels:
+                    results[label].append(series[label])
+                print(f"File: {file_name} was included")
 
     return results
 
@@ -78,11 +88,12 @@ def determine_name():
     name = base_name
     name_parts = {"company_name": [], "column": [], "method": [], "extrapolation_size": []}
     for file_name in os.listdir(pred_stats_csv_path):
-        parts = file_name.split("_")
-        name_parts["company_name"].append(parts[0])
-        name_parts["column"].append(parts[1])
-        name_parts["method"].append(parts[2])
-        name_parts["extrapolation_size"].append(parts[3].split(".")[0])
+        if file_name.endswith(".csv"):
+            parts = file_name.split("_")
+            name_parts["company_name"].append(parts[0])
+            name_parts["column"].append(parts[1])
+            name_parts["method"].append(parts[2])
+            name_parts["extrapolation_size"].append(parts[3].split(".")[0])
 
     for occurrences in name_parts.values():
         if occurrences.count(occurrences[0]) == len(occurrences):
@@ -100,6 +111,10 @@ def save_aggregation_to_file(df, name):
     latex_file = open(os.path.join(aggregation_path, name), "w")
     latex_file.write(latex)
     latex_file.close()
+
+
+def split_times(series, number):
+    return Series([[float(time) for time in times.split(" + ")][number] for times in series[avg_time_label]])
 
 
 if __name__ == '__main__':
