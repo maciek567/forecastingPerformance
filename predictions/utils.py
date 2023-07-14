@@ -74,7 +74,8 @@ def normalized_columns_weights(columns, weights):
     return {column: weight / sum(used_weights.values()) for column, weight in used_weights.items()}
 
 
-def plot_extrapolation(model, result: dict, company_name: str, save_file: bool = False) -> None:
+def plot_extrapolation(model, result: dict, company_name: str, real_columns: list, deviated_columns: list,
+                       save_file: bool = False) -> None:
     plt.clf()
     if model.deviation == DeviationSource.NOISE:
         plot_defects(model)
@@ -84,21 +85,10 @@ def plot_extrapolation(model, result: dict, company_name: str, save_file: bool =
         plot_defects(model)
 
     plot_results(model, result)
-    plt.axvline(x=model.prediction_border, color='g', label='Prediction start', linestyle="--", linewidth='1')
 
-    method = method_name(model.get_method())
-    deviation = f'{model.deviation.value}' + (f', {model.scale.value}' if model.scale is not None else "")
-    plt.title(f"{company_name} [{method}, {deviation}]")
-    plt.xlabel(TIME_DAYS_LABEL)
-    plt.ylabel(PRICE_USD_LABEL)
-    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    show_titles_and_legend(model, company_name, real_columns, deviated_columns)
 
-    if save_file:
-        os.makedirs(pred_graphs_path, exist_ok=True)
-        deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
-        name = f"{company_name}_{'_'.join([column.value for column in model.columns])}_{method}_{deviation}_{model.predict_size}"
-        path = os.path.join(pred_graphs_path, name)
-        plt.savefig(f"{path}.pdf", bbox_inches='tight')
+    save_to_file(save_file, model, company_name)
     plt.show()
 
 
@@ -126,6 +116,30 @@ def plot_results(model, result):
         plt.plot(range(prediction_start, prediction_start + model.predict_size),
                  series, label=f"Extrapolation: {column.value}", linewidth='1.0', color=colors[i % len(colors)])
         i += 1
+    plt.axvline(x=model.prediction_border, color='g', label='Prediction start', linestyle="--", linewidth='1')
+
+
+def show_titles_and_legend(model, company_name, real_columns, deviated_columns):
+    method = method_name(model.get_method())
+    plt.suptitle(f"{company_name} stock extrapolation: {method}", fontsize=14)
+    deviation_subtitle = f'Not deviated: {real_columns}' if len(real_columns) > 0 else ""
+    if model.deviation != DeviationSource.NONE and len(deviated_columns) > 0:
+        deviation_subtitle = deviation_subtitle + ", " if deviation_subtitle != "" else deviation_subtitle
+        deviation_subtitle = deviation_subtitle + f"{model.scale.value} {model.deviation.value}: {deviated_columns}"
+    plt.title(deviation_subtitle, fontsize=10)
+    plt.xlabel(TIME_DAYS_LABEL)
+    plt.ylabel(PRICE_USD_LABEL)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+
+
+def save_to_file(save_file, model, company_name):
+    method = method_name(model.get_method())
+    if save_file:
+        os.makedirs(pred_graphs_path, exist_ok=True)
+        deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
+        name = f"{company_name}_{'_'.join([column.value for column in model.columns])}_{method}_{deviation}_{model.predict_size}"
+        path = os.path.join(pred_graphs_path, name)
+        plt.savefig(f"{path}.pdf", bbox_inches='tight')
 
 
 def min_prediction_start(prediction_start_dict):

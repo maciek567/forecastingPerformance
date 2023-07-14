@@ -2,7 +2,7 @@ import numpy as np
 from pandas import Series
 from scipy import interpolate
 
-from timeseries.enums import DeviationScale, DeviationSource, Deviation
+from timeseries.enums import DeviationScale, DeviationSource, Deviation, SeriesColumn
 from timeseries.utils import perform_mitigation
 
 
@@ -10,7 +10,7 @@ class IncompleteSeries:
     def __init__(self, model, all_incomplete_parts: dict, partially_incomplete_parts: dict):
         self.model = model
         self.all_incomplete_parts = self.set_all_incomplete_parts(all_incomplete_parts)
-        self.partially_incomplete_parts = partially_incomplete_parts
+        self.partially_incomplete_parts = self.set_partly_incomplete_parts(partially_incomplete_parts)
         self.set_all_incomplete_series()
         self.set_partially_incomplete_series()
         self.set_mitigated_incompleteness_series()
@@ -19,6 +19,12 @@ class IncompleteSeries:
     def set_all_incomplete_parts(all_incomplete_parts: dict):
         return all_incomplete_parts if all_incomplete_parts is not None \
             else {DeviationScale.SLIGHTLY: 0.05, DeviationScale.MODERATELY: 0.12, DeviationScale.HIGHLY: 0.3}
+
+    @staticmethod
+    def set_partly_incomplete_parts(partially_incomplete_parts):
+        if partially_incomplete_parts is not None:
+            return {column: partially_incomplete_parts[column] if column in partially_incomplete_parts.keys()
+            else {scale: 0 for scale in DeviationScale} for column in SeriesColumn}
 
     def set_all_incomplete_series(self):
         self.model.all_deviated_series[DeviationSource.INCOMPLETENESS] = \

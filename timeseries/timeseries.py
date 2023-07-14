@@ -85,3 +85,29 @@ class StockMarketSeries:
                         series = series[Mitigation.DATA]
                     self.provider.save_as_csv(series,
                                               f"{self.company_name}_{deviation.name}_{scale.name}_{attribute.name}{mitigation_time}{suffix}")
+
+    def determine_real_and_deviated_columns(self, deviation_range, source, columns) -> tuple:
+        deviated_columns = None
+        if deviation_range == DeviationRange.ALL and source != DeviationSource.NONE:
+            return [], self.column_values(columns)
+        else:
+            if source == DeviationSource.NOISE:
+                deviated_columns = self.deviated_columns(self.noises.partially_noised_strength)
+            elif source == DeviationSource.INCOMPLETENESS:
+                deviated_columns = self.deviated_columns(self.incompleteness.partially_incomplete_parts)
+            elif source == DeviationSource.TIMELINESS:
+                deviated_columns = self.deviated_columns(self.obsolescence.partially_obsolete_scales)
+            else:
+                return self.column_values(columns), []
+            deviated_columns = [column for column in deviated_columns if column is not None and column in columns]
+            real_columns = [column for column in columns if column not in deviated_columns]
+            return self.column_values(real_columns), self.column_values(deviated_columns)
+
+    @staticmethod
+    def deviated_columns(deviation_scale_dict):
+        return [(column if not all(value == 0.0 for value in scale_dict.values()) else None) for column, scale_dict in
+                deviation_scale_dict.items()]
+
+    @staticmethod
+    def column_values(columns):
+        return [column.value for column in columns]

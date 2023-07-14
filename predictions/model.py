@@ -151,7 +151,11 @@ class PredictionModel:
             model = self.model_mitigated[source][scale]
         try:
             prediction_results = model.extrapolate(self.additional_params)
-            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name, save_file=save_file)
+
+            real_columns, deviated_columns = self.stock.determine_real_and_deviated_columns(self.deviation_range,
+                                                                                            source, self.columns)
+            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name,
+                                     real_columns, deviated_columns, save_file=save_file)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 

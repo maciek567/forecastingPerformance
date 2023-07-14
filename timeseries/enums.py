@@ -12,9 +12,9 @@ class SeriesColumn(Enum):
 
 class DeviationSource(Enum):
     NONE = "no deviations"
-    NOISE = "noise"
-    INCOMPLETENESS = "incompleteness"
-    TIMELINESS = "timeliness"
+    NOISE = "noised"
+    INCOMPLETENESS = "incomplete"
+    TIMELINESS = "obsolete"
 
 
 def sources_short():
