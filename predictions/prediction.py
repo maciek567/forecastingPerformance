@@ -42,7 +42,7 @@ class PredictionStats:
 
 
 class Prediction:
-    def __init__(self, prices_dict: dict, real_prices_dict: dict, prediction_border: int, prediction_delay: int,
+    def __init__(self, prices_dict: dict, real_prices_dict: dict, prediction_border: int, prediction_delay: dict,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time_dict: dict = None,
                  spark=None, weights: dict = None):
         self.data_with_defects = {column: prices[:prediction_border].values for column, prices in prices_dict.items()}
@@ -50,8 +50,8 @@ class Prediction:
         self.training_size = {column: len(prices.values) for column, prices in self.data_to_learn.items()}
         self.prediction_border = prediction_border
         self.prediction_delay = prediction_delay
-        self.prediction_start = prediction_border + prediction_delay
-        self.data_to_validate = {column: Series(real_prices.values[self.prediction_start:]) for column, real_prices in
+        self.prediction_start = {column: prediction_border + prediction_delay[column] for column in columns}
+        self.data_to_validate = {column: Series(real_prices.values[self.prediction_start[column]:]) for column, real_prices in
                                  real_prices_dict.items()}
         self.actual_data = real_prices_dict
         self.predict_size = len(list(self.data_to_validate.values())[0])

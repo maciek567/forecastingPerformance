@@ -75,7 +75,7 @@ class PredictionModel:
         return self.method(prices={column: self.stock.real_series[column] for column in self.columns},
                            real_prices={column: self.stock.real_series[column] for column in self.columns},
                            prediction_border=self.prediction_start,
-                           prediction_delay=0,
+                           prediction_delay={column: 0 for column in self.columns},
                            columns=self.columns,
                            deviation=DeviationSource.NONE,
                            scale=None,
@@ -100,8 +100,7 @@ class PredictionModel:
                          self.columns} if source is not DeviationSource.TIMELINESS else
             {column: self.get_series_deviated(self.deviation_range)[source][scale][column] for column in self.columns},
             prediction_border=self.prediction_start,
-            prediction_delay=self.stock.obsolescence.obsolescence_scale[
-                scale] if source == DeviationSource.TIMELINESS else 0,
+            prediction_delay={column: self.determine_delay(source, scale, column) for column in self.columns},
             columns=self.columns,
             deviation=source,
             scale=scale,
@@ -116,7 +115,7 @@ class PredictionModel:
                              column in self.columns},
             real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
-            prediction_delay=0,
+            prediction_delay={column: 0 for column in self.columns},
             columns=self.columns,
             deviation=source,
             scale=scale,
@@ -131,6 +130,15 @@ class PredictionModel:
             series_deviated = self.stock.partially_deviated_series
 
         return series_deviated
+
+    def determine_delay(self, source, scale, column):
+        if source == DeviationSource.TIMELINESS:
+            if self.deviation_range == DeviationRange.ALL:
+                return self.stock.obsolescence.all_obsolescence_scale[scale]
+            else:
+                return self.stock.obsolescence.partially_obsolete_scales[column][scale]
+        else:
+            return 0
 
     def plot_prediction(self, source: DeviationSource, scale: DeviationScale = None, mitigation: bool = False,
                         save_file: bool = False) -> None:

@@ -10,8 +10,9 @@ from timeseries.obsolescence import ObsolescenceSeries
 
 class StockMarketSeries:
     def __init__(self, company_name: str, time_series_start: str, time_series_values: int, weights: dict,
-                 all_noises_strength: dict = None, all_incomplete_parts: dict = None, obsoleteness_scale: dict = None,
-                 partially_noised_strength: dict = None, partially_incomplete_parts: dict = None,
+                 all_noised_scale: dict = None, all_incomplete_scale: dict = None, all_obsolete_scale: dict = None,
+                 partly_noised_scale: dict = None, partly_incomplete_scale: dict = None,
+                 partly_obsolete_scale: dict = None,
                  columns: set = SeriesColumn, cache: bool = False):
         self.company_name = company_name
         self.data = YFinanceProvider.load_csv(company_name)
@@ -25,9 +26,9 @@ class StockMarketSeries:
         self.all_deviated_series = {}
         self.partially_deviated_series = {}
         self.mitigated_deviations_series = {}
-        self.noises = NoisedSeries(self, all_noises_strength, partially_noised_strength)
-        self.incompleteness = IncompleteSeries(self, all_incomplete_parts, partially_incomplete_parts)
-        self.obsolescence = ObsolescenceSeries(self, obsoleteness_scale)
+        self.noises = NoisedSeries(self, all_noised_scale, partly_noised_scale)
+        self.incompleteness = IncompleteSeries(self, all_incomplete_scale, partly_incomplete_scale)
+        self.obsolescence = ObsolescenceSeries(self, all_obsolete_scale, partly_obsolete_scale)
         if cache:
             self.cache_series_set()
 

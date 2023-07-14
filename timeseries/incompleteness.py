@@ -27,7 +27,9 @@ class IncompleteSeries:
     def set_partially_incomplete_series(self):
         if self.partially_incomplete_parts is not None:
             self.model.partially_deviated_series[DeviationSource.INCOMPLETENESS] = \
-                self.nullify_some_series_set(self.partially_incomplete_parts)
+                {scale: self.nullify_some_series(
+                    {column: incomplete[scale] for column, incomplete in self.partially_incomplete_parts.items()})
+                    for scale in DeviationScale}
 
     def set_mitigated_incompleteness_series(self):
         self.model.mitigated_deviations_series[DeviationSource.INCOMPLETENESS] = \
@@ -41,11 +43,6 @@ class IncompleteSeries:
     def nullify_all_series(self, incomplete_part: float) -> dict:
         return self.model.deviate_all_series(
             {column: Deviation(self.add_incompleteness, incomplete_part) for column in self.model.columns})
-
-    def nullify_some_series_set(self, partially_incomplete_parts) -> dict:
-        return {incomplete: self.nullify_some_series(
-            {column: incompleted[incomplete] for column, incompleted in partially_incomplete_parts.items()})
-            for incomplete in DeviationScale}
 
     def nullify_some_series(self, incomplete_parts: dict) -> dict:
         return self.model.deviate_some_series(

@@ -122,9 +122,14 @@ def plot_results(model, result):
     colors = ['cornflowerblue', 'orange', 'blue', 'violet'] if len(model.columns) > 1 else ['forestgreen']
     i = 0
     for column, series in sort_dict(result).items():
-        plt.plot(range(model.prediction_start, model.prediction_start + model.predict_size),
+        prediction_start = min_prediction_start(model.prediction_start)
+        plt.plot(range(prediction_start, prediction_start + model.predict_size),
                  series, label=f"Extrapolation: {column.value}", linewidth='1.0', color=colors[i % len(colors)])
         i += 1
+
+
+def min_prediction_start(prediction_start_dict):
+    return min([pred_start for pred_start in prediction_start_dict.values()])
 
 
 def sort_dict(dict_to_sort) -> dict:
