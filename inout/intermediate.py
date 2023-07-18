@@ -6,7 +6,7 @@ from pyspark.sql import DataFrame
 
 from inout.paths import deviations_path
 from timeseries.enums import DeviationScale, DeviationSource, SeriesColumn
-from timeseries.utils import Mitigation
+from timeseries.utils import MitigationType
 
 
 class IntermediateProvider:
@@ -22,6 +22,17 @@ class IntermediateProvider:
     @staticmethod
     def save_as_latex(path, latex):
         latex_file = open(path + ".tex", "w")
+        latex_file.write(latex)
+        latex_file.close()
+
+    @staticmethod
+    def save_as_tex(df, path, name):
+        os.makedirs(path, exist_ok=True)
+        latex = df.to_latex(index=False,
+                            formatters={"name": str.upper},
+                            float_format="{:.2f}".format)
+
+        latex_file = open(os.path.join(path, name), "w")
         latex_file.write(latex)
         latex_file.close()
 
@@ -53,7 +64,7 @@ class IntermediateProvider:
             elif is_mitigated and parts[-1] == "mitigated":
                 mitigation = series_set[DeviationSource[parts[1]]][DeviationScale[parts[2]]][
                     SeriesColumn[parts[3]]] = {}
-                mitigation[Mitigation.DATA] = series
-                mitigation[Mitigation.TIME] = float(parts[4])
+                mitigation[MitigationType.DATA] = series
+                mitigation[MitigationType.TIME] = float(parts[4])
 
         return series_set

@@ -3,7 +3,7 @@ import time
 
 from pandas import Series
 
-from timeseries.enums import Mitigation
+from timeseries.enums import MitigationType
 
 
 def perform_mitigation(series: Series, mitigation_method) -> dict:
@@ -14,4 +14,4 @@ def perform_mitigation(series: Series, mitigation_method) -> dict:
 
     elapsed_time_ms = (time.perf_counter_ns() - start_time) / 1e6
     gc.enable()
-    return {Mitigation.DATA: mitigated_series, Mitigation.TIME: elapsed_time_ms}
+    return {MitigationType.DATA: mitigated_series, MitigationType.TIME: elapsed_time_ms}

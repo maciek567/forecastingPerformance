@@ -2,15 +2,17 @@ import math
 
 from matplotlib import pyplot as plt
 
-from timeseries.enums import DeviationScale, SeriesColumn
+from timeseries.enums import DeviationScale, SeriesColumn, Mitigation, DeviationRange, DeviationSource
 from timeseries.timeseries import StockMarketSeries
 from util.graphs import save_image, set_ticks_size
 
 
 class HeinrichTimelinessMetric:
 
-    def __init__(self, stock: StockMarketSeries):
+    def __init__(self, stock: StockMarketSeries, declines: dict, measurement_times: dict):
         self.stock = stock
+        self.declines = declines
+        self.measurement_times = measurement_times
 
     @staticmethod
     def timeliness_values(decline: float, age: float) -> float:
@@ -28,35 +30,53 @@ class HeinrichTimelinessMetric:
             quality_sum += self.timeliness_tuples(declines, ages_list[i])
         return quality_sum / len(ages_list)
 
-    def values_qualities(self, decline: float, measurement_times: dict) -> tuple:
+    def values_qualities(self, column: SeriesColumn) -> tuple:
         deltas = {}
         qualities = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
-            deltas[scale], ages = self.stock.obsolescence.get_ages(measurement_times[scale])
+            deltas[scale], ages = self.stock.obsolescence.get_ages(self.measurement_times[scale])
             for i in range(self.stock.data_size):
-                qualities[scale].append(self.timeliness_values(decline, ages[i]))
+                qualities[scale].append(self.timeliness_values(self.declines[column], ages[i]))
 
         return deltas, qualities
 
-    def tuples_qualities(self, declines: dict, measurement_times: dict) -> tuple:
+    def tuples_qualities(self, obsoleteness_range: DeviationRange) -> tuple:
         deltas = {}
         qualities = {scale: [] for scale in DeviationScale}
 
         for scale in DeviationScale:
-            deltas[scale], ages = self.stock.obsolescence.get_ages(measurement_times[scale])
+            deltas[scale], ages = self.stock.obsolescence.get_ages(self.measurement_times[scale])
             for i in range(self.stock.data_size):
-                qualities[scale].append(self.timeliness_tuples(declines, ages[i]))
+                qualities[scale].append(self.timeliness_tuples(self.declines, ages[i]))
 
         return deltas, qualities
 
-    def relation_qualities(self, declines: dict, measurement_times: dict) -> dict:
-        ages = {scale: [] for scale in DeviationScale}
+    def relation_qualities(self, obsoleteness_range: DeviationRange) -> dict:
+        if obsoleteness_range == DeviationRange.ALL:
+            ages = {scale: [] for scale in DeviationScale}
 
-        for scale in DeviationScale:
-            time_diffs, ages[scale] = self.stock.obsolescence.get_ages(measurement_times[scale])
+            for scale in DeviationScale:
+                time_diffs, ages[scale] = self.stock.obsolescence.get_ages(self.measurement_times[scale])
 
-        return {scale: self.timeliness_relations(declines, ages[scale]) for scale in DeviationScale}
+            return {scale: {Mitigation.NOT_MITIGATED: self.timeliness_relations(self.declines, ages[scale])}
+                    for scale in DeviationScale}
+
+        else:
+            ages = {scale: {column: [] for column in SeriesColumn} for scale in DeviationScale}
+            real, deviated = self.stock.determine_real_and_deviated_columns(DeviationRange.PARTIAL,
+                                                                            DeviationSource.TIMELINESS,
+                                                                            self.stock.columns)
+            for scale in DeviationScale:
+                for column in real:
+                    time_diffs, ages[scale][column] = self.stock.obsolescence.get_ages(0)
+                for column in deviated:
+                    time_diffs, ages[scale][column] = self.stock.obsolescence.get_ages(self.measurement_times[scale])
+
+            return {scale: {Mitigation.NOT_MITIGATED: sum(
+                [self.timeliness_relations(self.declines, ages[scale][column]) * self.stock.weights[column]
+                 for column in SeriesColumn])}
+                for scale in DeviationScale}
 
     def draw_timeliness_qualities(self, times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
         column = column_name.value if column_name is not None else "all columns"
@@ -83,3 +103,7 @@ class HeinrichTimelinessMetric:
     def prepare_x_ticks(times):
         return [i for i in range(0, len(times), len(times) // 6)], [i for i in times if
                                                                     int(i) % (len(times) // 6) == 0]
+
+    @staticmethod
+    def get_deviation_name():
+        return DeviationSource.TIMELINESS

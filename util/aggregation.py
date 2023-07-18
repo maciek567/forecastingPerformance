@@ -3,6 +3,7 @@ import warnings
 
 from pandas import read_csv, DataFrame, Series
 
+from inout.intermediate import IntermediateProvider
 from inout.paths import aggregation_path, pred_stats_csv_path
 from predictions.model import avg_rmse_label, deviations_source_label, deviations_scale_label, \
     deviations_mitigation_label, avg_time_label, std_dev_time_label, avg_mitigation_time_label, avg_mape_label, \
@@ -18,7 +19,7 @@ def aggregate_results():
     results = collect_data_from_files()
     df = calculate_averages(results)
     name = determine_name()
-    save_aggregation_to_file(df, name)
+    IntermediateProvider.save_as_tex(df, aggregation_path, name)
 
 
 def collect_data_from_files():
@@ -100,17 +101,6 @@ def determine_name():
             name += f"_{occurrences[0]}"
     name += ".tex"
     return name
-
-
-def save_aggregation_to_file(df, name):
-    os.makedirs(aggregation_path, exist_ok=True)
-    latex = df.to_latex(index=False,
-                        formatters={"name": str.upper},
-                        float_format="{:.2f}".format)
-
-    latex_file = open(os.path.join(aggregation_path, name), "w")
-    latex_file.write(latex)
-    latex_file.close()
 
 
 def split_times(series, number):

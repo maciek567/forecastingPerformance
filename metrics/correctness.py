@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 from metrics.utils import MetricLevel
-from timeseries.enums import SeriesColumn, DeviationRange, DeviationSource, DeviationScale
+from timeseries.enums import SeriesColumn, DeviationRange, DeviationSource, DeviationScale, Mitigation
 from timeseries.timeseries import StockMarketSeries
 from util.graphs import save_image, set_legend, TIME_DAYS_LABEL
 
@@ -10,7 +10,7 @@ class HeinrichCorrectnessMetric:
 
     def __init__(self, stock: StockMarketSeries, alpha: dict = None):
         self.stock = stock
-        self.default_alpha = {column: 1.0 for column in SeriesColumn}
+        self.default_alpha = {column: 0.5 for column in SeriesColumn}
         self.custom_alpha = alpha
 
     @staticmethod
@@ -58,18 +58,22 @@ class HeinrichCorrectnessMetric:
 
         return qualities
 
-    def relation_qualities(self, noise_range: DeviationRange = DeviationRange.ALL, is_alpha: bool = True) -> dict:
+    def relation_qualities(self, noise_range: DeviationRange, is_alpha: bool = True) -> dict:
         alpha = self.get_alpha(is_alpha)
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
+        mitigated_series = self.stock.get_mitigated_series(DeviationSource.NOISE, noise_range)
         real_tuples = []
         deviated_tuples = {scale: [] for scale in DeviationScale}
+        mitigated_tuples = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.data_size):
             real_tuples.append(self.stock.get_dict_for_tuple(self.stock.real_series, i))
             for scale in DeviationScale:
                 deviated_tuples[scale].append(self.stock.get_dict_for_tuple(deviated_series[scale], i))
+                mitigated_tuples[scale].append(self.stock.get_dict_for_tuple(mitigated_series[scale], i))
 
-        return {scale: self.heinrich_relation(deviated_tuples[scale], real_tuples, alpha)
+        return {scale: {Mitigation.NOT_MITIGATED: self.heinrich_relation(deviated_tuples[scale], real_tuples, alpha),
+                        Mitigation.MITIGATED: self.heinrich_relation(mitigated_tuples[scale], real_tuples, alpha)}
                 for scale in DeviationScale}
 
     def get_alpha(self, is_alpha: bool) -> dict:
@@ -104,3 +108,7 @@ class HeinrichCorrectnessMetric:
         else:
             return "\n" + str({column.value: strengths[strength] for column, strengths in
                                self.stock.noises.partially_noised_strength.items()}).replace("\'", "")
+
+    @staticmethod
+    def get_deviation_name():
+        return DeviationSource.NOISE

@@ -2,7 +2,7 @@ from pandas import Series
 
 from inout.intermediate import IntermediateProvider
 from inout.provider import YFinanceProvider
-from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, Mitigation
+from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, MitigationType, DeviationScale
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
@@ -22,7 +22,7 @@ class StockMarketSeries:
         self.columns = columns
         self.provider = IntermediateProvider()
         self.real_series = self.create_multiple_series()
-        self.weights = weights
+        self.weights = self.normalize_weights(weights)
         self.all_deviated_series = {}
         self.partially_deviated_series = {}
         self.mitigated_deviations_series = {}
@@ -55,6 +55,15 @@ class StockMarketSeries:
         return self.all_deviated_series[source] if deviation_range == DeviationRange.ALL \
             else self.partially_deviated_series[source]
 
+    def get_mitigated_series(self, source: DeviationSource, deviation_range: DeviationRange) -> dict:
+        if deviation_range == DeviationRange.ALL:
+            return {scale: {column: self.mitigated_deviations_series[source][scale][column][MitigationType.DATA]
+                            for column in SeriesColumn} for scale in DeviationScale}
+        else:
+            return {scale: {column: self.mitigated_deviations_series[source][scale][column][MitigationType.DATA] if
+            self.noises.partially_noised_strength[column][scale] != 0 else self.real_series[column]
+                            for column in SeriesColumn} for scale in DeviationScale}
+
     def deviate_all_series(self, deviations: dict) -> dict:
         return {column: deviation.method(self.real_series[column], deviation.scale) for column, deviation in
                 deviations.items()}
@@ -64,6 +73,10 @@ class StockMarketSeries:
                 for column in SeriesColumn} | \
             {column: deviation.method(self.real_series[column], deviation.scale)
              for column, deviation in series_to_deviate.items()}
+
+    @staticmethod
+    def normalize_weights(weights):
+        return {column: weight / sum([w for w in weights.values()]) for column, weight in weights.items()}
 
     def cache_series_set(self):
         self.provider.remove_current_files()
@@ -81,15 +94,15 @@ class StockMarketSeries:
                 for attribute, series in attributes.items():
                     mitigation_time = ""
                     if is_mitigation:
-                        mitigation_time = "_" + str(series[Mitigation.TIME])
-                        series = series[Mitigation.DATA]
+                        mitigation_time = "_" + str(series[MitigationType.TIME])
+                        series = series[MitigationType.DATA]
                     self.provider.save_as_csv(series,
                                               f"{self.company_name}_{deviation.name}_{scale.name}_{attribute.name}{mitigation_time}{suffix}")
 
     def determine_real_and_deviated_columns(self, deviation_range, source, columns) -> tuple:
         deviated_columns = None
         if deviation_range == DeviationRange.ALL and source != DeviationSource.NONE:
-            return [], self.column_values(columns)
+            return [], columns
         else:
             if source == DeviationSource.NOISE:
                 deviated_columns = self.deviated_columns(self.noises.partially_noised_strength)
@@ -98,16 +111,12 @@ class StockMarketSeries:
             elif source == DeviationSource.TIMELINESS:
                 deviated_columns = self.deviated_columns(self.obsolescence.partially_obsolete_scales)
             else:
-                return self.column_values(columns), []
+                return columns, []
             deviated_columns = [column for column in deviated_columns if column is not None and column in columns]
             real_columns = [column for column in columns if column not in deviated_columns]
-            return self.column_values(real_columns), self.column_values(deviated_columns)
+            return real_columns, deviated_columns
 
     @staticmethod
     def deviated_columns(deviation_scale_dict):
         return [(column if not all(value == 0.0 for value in scale_dict.values()) else None) for column, scale_dict in
                 deviation_scale_dict.items()]
-
-    @staticmethod
-    def column_values(columns):
-        return [column.value for column in columns]

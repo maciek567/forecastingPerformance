@@ -11,7 +11,7 @@ from inout.paths import pred_stats_csv_path, pred_results_path, pred_stats_tex_p
 from predictions import utils
 from predictions.conditions import do_method_return_extra_params
 from predictions.spark import handle_spark
-from timeseries.enums import sources_short, scales_short, mitigation_short, Mitigation, DeviationScale
+from timeseries.enums import sources_short, scales_short, mitigation_short, MitigationType, DeviationScale, Mitigation
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
 
 number_label = "Num."
@@ -109,9 +109,9 @@ class PredictionModel:
 
     def create_model_mitigated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices={column: self.stock.mitigated_deviations_series[source][scale][column][Mitigation.DATA] for column in
+            prices={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.DATA] for column in
                     self.columns},
-            mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][Mitigation.TIME] for
+            mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.TIME] for
                              column in self.columns},
             real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
@@ -205,7 +205,7 @@ class PredictionModel:
                 number_label: number,
                 deviations_source_label: sources_short()[source],
                 deviations_scale_label: scales_short()[scale],
-                deviations_mitigation_label: mitigation_short()[mitigation],
+                deviations_mitigation_label: mitigation_short()[Mitigation.MITIGATED if mitigation else Mitigation.NOT_MITIGATED],
                 avg_time_label: f"{display.format(mean([r.prepare_time for r in results]))} + {display.format(mean([r.model_time for r in results]))} + {display.format(mean([r.prediction_time for r in results]))}",
                 std_dev_time_label: stdev([r.prepare_time + r.model_time + r.prediction_time for r in results]),
                 avg_mitigation_time_label: mean([r.mitigation_time for r in results]),

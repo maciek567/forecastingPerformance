@@ -6,38 +6,17 @@ from predictions.model import PredictionModel
 from predictions.normal.ml import XGBoost
 from predictions.normal.nn import Reservoir, NHits
 from predictions.normal.stats import AutoArima, Ces, Garch
-from timeseries.enums import SeriesColumn, DeviationSource, DeviationScale, DeviationRange
+from run.configuration import time_series_start, all_noises_scale, all_incompleteness_scale, all_obsolete_scale, \
+    partially_noised_scales, partially_incomplete_scales, partially_obsolete_scales, time_series_values, weights, \
+    company_names
+from timeseries.enums import DeviationSource, DeviationScale, DeviationRange, SeriesColumn
 from timeseries.timeseries import StockMarketSeries
-
-# company_names = ['AMD', 'Accenture', 'Acer', 'Activision', 'Adobe', 'Akamai', 'Alibaba', 'Amazon', 'Apple', 'At&t',
-#                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
-#                  'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
-# methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
-
-company_names = ["Accenture"]
-columns = [SeriesColumn.LOW, SeriesColumn.HIGH]
-time_series_start = "2017-01-03"
-time_series_values = 1575
-
-weights = {SeriesColumn.OPEN: 0.2, SeriesColumn.CLOSE: 0.2, SeriesColumn.ADJ_CLOSE: 0.25,
-           SeriesColumn.HIGH: 0.15, SeriesColumn.LOW: 0.15, SeriesColumn.VOLUME: 0.05}
-all_noises_scale = {DeviationScale.SLIGHTLY: 0.7, DeviationScale.MODERATELY: 1.7, DeviationScale.HIGHLY: 4.0}
-all_incompleteness_scale = {DeviationScale.SLIGHTLY: 0.05, DeviationScale.MODERATELY: 0.12, DeviationScale.HIGHLY: 0.3}
-all_obsolete_scale = {DeviationScale.SLIGHTLY: 5, DeviationScale.MODERATELY: 15, DeviationScale.HIGHLY: 50}
-partially_noised_scales = \
-    {SeriesColumn.CLOSE: {DeviationScale.SLIGHTLY: 0.6, DeviationScale.MODERATELY: 2.0, DeviationScale.HIGHLY: 6.0},
-     SeriesColumn.OPEN: {DeviationScale.SLIGHTLY: 0.4, DeviationScale.MODERATELY: 1.7, DeviationScale.HIGHLY: 5.2}}
-partially_incomplete_scales = \
-    {SeriesColumn.CLOSE: {DeviationScale.SLIGHTLY: 0.05, DeviationScale.MODERATELY: 0.12, DeviationScale.HIGHLY: 0.3},
-     SeriesColumn.OPEN: {DeviationScale.SLIGHTLY: 0.03, DeviationScale.MODERATELY: 0.08, DeviationScale.HIGHLY: 0.18}}
-partially_obsolete_scales = \
-    {SeriesColumn.CLOSE: {DeviationScale.SLIGHTLY: 5, DeviationScale.MODERATELY: 20, DeviationScale.HIGHLY: 50},
-     SeriesColumn.OPEN: {DeviationScale.SLIGHTLY: 3, DeviationScale.MODERATELY: 12, DeviationScale.HIGHLY: 30}}
 
 prediction_start = 1500
 iterations = 3
 unique_ids = "--unique_ids" in sys.argv
-methods = [Ces]
+methods = [Reservoir]
+columns = [SeriesColumn.CLOSE]
 sources = [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
 scales = [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
 is_mitigation = True

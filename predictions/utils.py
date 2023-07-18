@@ -120,6 +120,7 @@ def plot_results(model, result):
 
 
 def show_titles_and_legend(model, company_name, real_columns, deviated_columns):
+    real_columns, deviated_columns = column_values(real_columns), column_values(deviated_columns)
     method = method_name(model.get_method())
     plt.suptitle(f"{company_name} stock extrapolation: {method}", fontsize=14)
     deviation_subtitle = f'Not deviated: {real_columns}' if len(real_columns) > 0 else ""
@@ -148,3 +149,7 @@ def min_prediction_start(prediction_start_dict):
 
 def sort_dict(dict_to_sort) -> dict:
     return dict(sorted(dict_to_sort.items(), key=lambda x: x[0].value))
+
+
+def column_values(columns):
+    return [column.value for column in columns]

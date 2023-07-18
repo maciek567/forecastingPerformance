@@ -41,6 +41,18 @@ def scales_short():
     }
 
 
+class Mitigation(Enum):
+    MITIGATED = "mitigated"
+    NOT_MITIGATED = "not mitigated"
+
+
+def mitigation_short():
+    return {
+        Mitigation.NOT_MITIGATED: "N",
+        Mitigation.MITIGATED: "Y"
+    }
+
+
 class DeviationRange(Enum):
     ALL = "all"
     PARTIAL = "partially"
@@ -52,13 +64,6 @@ class Deviation:
         self.scale = scale
 
 
-class Mitigation(Enum):
+class MitigationType(Enum):
     DATA = "data"
     TIME = "time"
-
-
-def mitigation_short():
-    return {
-        True: "Y",
-        False: "N"
-    }

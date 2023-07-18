@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from metrics.utils import MetricLevel
-from timeseries.enums import SeriesColumn, DeviationRange, DeviationScale, DeviationSource
+from timeseries.enums import SeriesColumn, DeviationRange, DeviationScale, DeviationSource, Mitigation
 from timeseries.timeseries import StockMarketSeries
 from util.graphs import save_image, set_ticks_size, TIME_DAYS_LABEL
 
@@ -47,14 +47,18 @@ class BlakeCompletenessMetric:
 
         return qualities
 
-    def relation_qualities(self, incompleteness_range: DeviationRange = DeviationRange.ALL) -> dict:
+    def relation_qualities(self, incompleteness_range: DeviationRange) -> dict:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
+        mitigated_series = self.stock.get_mitigated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         deviated_tuples = {scale: [] for scale in DeviationScale}
+        mitigated_tuples = {scale: [] for scale in DeviationScale}
         for i in range(self.stock.data_size):
             for scale in DeviationScale:
                 deviated_tuples[scale].append(self.stock.get_list_for_tuple(deviated_series[scale], i))
-
-        return {scale: self.blake_relation(deviated_tuples[scale]) for scale in DeviationScale}
+                mitigated_tuples[scale].append(self.stock.get_list_for_tuple(mitigated_series[scale], i))
+        return {scale: {Mitigation.NOT_MITIGATED: self.blake_relation(deviated_tuples[scale]),
+                        Mitigation.MITIGATED: self.blake_relation(mitigated_tuples[scale])}
+                for scale in DeviationScale}
 
     def draw_blake(self, qualities: dict, level: MetricLevel,
                    incompleteness_range: DeviationRange = DeviationRange.ALL,
@@ -87,3 +91,7 @@ class BlakeCompletenessMetric:
         else:
             return str({column.value: probabilities[incompleteness] for column, probabilities in
                         self.stock.incompleteness.partially_incomplete_parts.items()}).replace("\'", "")
+
+    @staticmethod
+    def get_deviation_name():
+        return DeviationSource.INCOMPLETENESS
