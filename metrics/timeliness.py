@@ -2,6 +2,7 @@ import math
 
 from matplotlib import pyplot as plt
 
+from inout.paths import metrics_graphs_path
 from timeseries.enums import DeviationScale, SeriesColumn, Mitigation, DeviationRange, DeviationSource
 from timeseries.timeseries import StockMarketSeries
 from util.graphs import save_image, set_ticks_size
@@ -96,7 +97,7 @@ class HeinrichTimelinessMetric:
         ax[2].set_xlabel("Days before measurement")
         ax[1].set_ylabel("Quality")
         set_ticks_size(ax, "both", 10)
-        save_image(plt, title)
+        save_image(plt, title, metrics_graphs_path)
         plt.show()
 
     @staticmethod

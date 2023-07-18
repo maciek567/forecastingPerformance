@@ -29,13 +29,14 @@ additional_parameters_label = "(p,q)"
 
 class PredictionModel:
 
-    def __init__(self, stock: StockMarketSeries, prediction_start: int, columns: list,
+    def __init__(self, stock: StockMarketSeries, prediction_start: int, columns: list, graph_start: int,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
                  is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
                  unique_ids: bool = False, is_save_predictions: bool = False):
         self.stock = stock
         self.prediction_start = prediction_start
         self.columns = columns
+        self.graph_start = graph_start
         self.deviation_range = deviation_range
         self.deviations_sources = deviation_sources if deviation_sources is not None \
             else [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
@@ -109,9 +110,11 @@ class PredictionModel:
 
     def create_model_mitigated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.DATA] for column in
+            prices={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.DATA] for
+                    column in
                     self.columns},
-            mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.TIME] for
+            mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.TIME]
+                             for
                              column in self.columns},
             real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
@@ -154,7 +157,7 @@ class PredictionModel:
 
             real_columns, deviated_columns = self.stock.determine_real_and_deviated_columns(self.deviation_range,
                                                                                             source, self.columns)
-            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name,
+            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name, self.graph_start,
                                      real_columns, deviated_columns, save_file=save_file)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
@@ -205,7 +208,8 @@ class PredictionModel:
                 number_label: number,
                 deviations_source_label: sources_short()[source],
                 deviations_scale_label: scales_short()[scale],
-                deviations_mitigation_label: mitigation_short()[Mitigation.MITIGATED if mitigation else Mitigation.NOT_MITIGATED],
+                deviations_mitigation_label: mitigation_short()[
+                    Mitigation.MITIGATED if mitigation else Mitigation.NOT_MITIGATED],
                 avg_time_label: f"{display.format(mean([r.prepare_time for r in results]))} + {display.format(mean([r.model_time for r in results]))} + {display.format(mean([r.prediction_time for r in results]))}",
                 std_dev_time_label: stdev([r.prepare_time + r.model_time + r.prediction_time for r in results]),
                 avg_mitigation_time_label: mean([r.mitigation_time for r in results]),
@@ -249,7 +253,5 @@ class PredictionModel:
             file_name = f"{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{values_to_predict}"
             if self.unique_ids:
                 file_name += f"_{uuid.uuid4()}"
-            csv_path = os.path.join(pred_stats_csv_path, file_name)
-            tex_path = os.path.join(pred_stats_tex_path, file_name)
-            results.to_csv(csv_path + ".csv")
-            IntermediateProvider().save_as_latex(tex_path, latex)
+            results.to_csv(os.path.join(pred_stats_csv_path, file_name) + ".csv")
+            IntermediateProvider().save_latex(latex, pred_stats_tex_path, file_name)

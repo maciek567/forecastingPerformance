@@ -1,4 +1,5 @@
 from timeseries.enums import SeriesColumn, DeviationScale
+from timeseries.timeseries import StockMarketSeries
 
 # company_names = ['AMD', 'Accenture', 'Acer', 'Activision', 'Adobe', 'Akamai', 'Alibaba', 'Amazon', 'Apple', 'At&t',
 #                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
@@ -23,3 +24,15 @@ partially_incomplete_scales = \
 partially_obsolete_scales = \
     {SeriesColumn.CLOSE: {DeviationScale.SLIGHTLY: 5, DeviationScale.MODERATELY: 20, DeviationScale.HIGHLY: 50},
      SeriesColumn.OPEN: {DeviationScale.SLIGHTLY: 3, DeviationScale.MODERATELY: 12, DeviationScale.HIGHLY: 30}}
+
+
+def create_stock(company_name: str, is_cache=False):
+    return StockMarketSeries(company_name, time_series_start, time_series_values, weights,
+                             all_noised_scale=all_noises_scale,
+                             all_incomplete_scale=all_incompleteness_scale,
+                             all_obsolete_scale=all_obsolete_scale,
+                             partly_noised_scale=partially_noised_scales,
+                             partly_incomplete_scale=partially_incomplete_scales,
+                             partly_obsolete_scale=partially_obsolete_scales,
+                             cache=is_cache
+                             )

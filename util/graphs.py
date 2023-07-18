@@ -3,7 +3,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 
-from inout.paths import metrics_path
+from inout.paths import deviations_graph_path
 
 TIME_DAYS_LABEL = "Time, days"
 PRICE_USD_LABEL = "Price, USD"
@@ -14,13 +14,13 @@ def set_legend(ax):
     legend.get_frame().set_alpha(0.5)
 
 
-def save_image(plt, title):
+def save_image(plt, title, base_path):
     matplotlib.rcParams["font.family"] = "sans-serif"
     matplotlib.rcParams["font.serif"] = "courier"
     matplotlib.rcParams["font.size"] = 11
 
-    path = os.path.join(metrics_path, title.replace(' ', '_').replace(',', ''))
-    os.makedirs(metrics_path, exist_ok=True)
+    path = os.path.join(base_path, title.replace(' ', '_').replace(',', ''))
+    os.makedirs(base_path, exist_ok=True)
     plt.savefig(f"{path}.pdf", bbox_inches='tight')
 
 
@@ -40,7 +40,7 @@ def plot_series(stock, title: str, **kwargs) -> None:
     ax.set_xlabel(TIME_DAYS_LABEL)
     ax.set_ylabel(PRICE_USD_LABEL)
     set_legend(ax)
-    save_image(plt, title)
+    save_image(plt, title, deviations_graph_path)
     plt.show()
 
 

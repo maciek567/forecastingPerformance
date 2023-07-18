@@ -1,4 +1,3 @@
-import os
 from enum import Enum
 
 from pandas import DataFrame, concat
@@ -47,4 +46,4 @@ def print_relation_results_to_latex(results, source: DeviationSource, company_na
                              float_format="{:.3f}".format)
     print(latex)
     name = f"{company_name}_{source.name}"
-    IntermediateProvider.save_as_latex(os.path.join(metrics_scores_path, name), latex)
+    IntermediateProvider.save_latex(latex, metrics_scores_path, name)

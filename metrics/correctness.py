@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 
+from inout.paths import metrics_graphs_path
 from metrics.utils import MetricLevel
 from timeseries.enums import SeriesColumn, DeviationRange, DeviationSource, DeviationScale, Mitigation
 from timeseries.timeseries import StockMarketSeries
@@ -99,7 +100,7 @@ class HeinrichCorrectnessMetric:
         ax.set_xlabel(TIME_DAYS_LABEL)
         ax.set_ylabel("Quality")
         set_legend(ax)
-        save_image(plt, title)
+        save_image(plt, title, metrics_graphs_path)
         plt.show()
 
     def noises_label(self, strength: DeviationScale, noise_range: DeviationRange) -> str:

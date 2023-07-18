@@ -74,17 +74,17 @@ def normalized_columns_weights(columns, weights):
     return {column: weight / sum(used_weights.values()) for column, weight in used_weights.items()}
 
 
-def plot_extrapolation(model, result: dict, company_name: str, real_columns: list, deviated_columns: list,
-                       save_file: bool = False) -> None:
+def plot_extrapolation(model, result: dict, company_name: str, graph_start: int,
+                       real_columns: list, deviated_columns: list, save_file: bool = False) -> None:
     plt.clf()
     if model.deviation == DeviationSource.NOISE:
-        plot_defects(model)
-        plot_actual(model)
+        plot_defects(model, graph_start)
+        plot_actual(model, graph_start)
     else:
-        plot_actual(model)
-        plot_defects(model)
+        plot_actual(model, graph_start)
+        plot_defects(model, graph_start)
 
-    plot_results(model, result)
+    plot_results(model, result, graph_start)
 
     show_titles_and_legend(model, company_name, real_columns, deviated_columns)
 
@@ -92,31 +92,34 @@ def plot_extrapolation(model, result: dict, company_name: str, real_columns: lis
     plt.show()
 
 
-def plot_actual(model):
+def plot_actual(model, graph_start):
     colors = ['indigo', 'orangered', 'coral'] if len(model.columns) > 1 else ['orangered']
     i = 0
     for column, series in sort_dict(model.actual_data).items():
-        plt.plot(series.values, "r", label=f"Actual: {column.value}", linewidth='0.7', color=colors[i % len(colors)])
+        plt.plot(series.values[graph_start:], "r", label=f"Actual: {column.value}", linewidth='0.7',
+                 color=colors[i % len(colors)])
         i += 1
 
 
-def plot_defects(model):
+def plot_defects(model, graph_start):
     colors = ['royalblue', 'darkorange', 'navy', 'darkviolet'] if len(model.columns) > 1 else ['royalblue']
     i = 0
     for column, series in sort_dict(model.data_with_defects).items():
-        plt.plot(series, "b", label=f"Training: {column.value}", linewidth='0.7', color=colors[i % len(colors)])
+        plt.plot(series[graph_start:], "b", label=f"Training: {column.value}", linewidth='0.7',
+                 color=colors[i % len(colors)])
         i += 1
 
 
-def plot_results(model, result):
+def plot_results(model, result, graph_start):
     colors = ['cornflowerblue', 'orange', 'blue', 'violet'] if len(model.columns) > 1 else ['forestgreen']
     i = 0
     for column, series in sort_dict(result).items():
         prediction_start = min_prediction_start(model.prediction_start)
-        plt.plot(range(prediction_start, prediction_start + model.predict_size),
+        plt.plot(range(prediction_start - graph_start, prediction_start + model.predict_size - graph_start),
                  series, label=f"Extrapolation: {column.value}", linewidth='1.0', color=colors[i % len(colors)])
         i += 1
-    plt.axvline(x=model.prediction_border, color='g', label='Prediction start', linestyle="--", linewidth='1')
+    plt.axvline(x=model.prediction_border - graph_start, color='g', label='Prediction start', linestyle="--",
+                linewidth='1')
 
 
 def show_titles_and_legend(model, company_name, real_columns, deviated_columns):

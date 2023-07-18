@@ -1,6 +1,7 @@
 from pandas import Series
 
 from inout.intermediate import IntermediateProvider
+from inout.paths import deviations_csv_path
 from inout.provider import YFinanceProvider
 from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, MitigationType, DeviationScale
 from timeseries.incompleteness import IncompleteSeries
@@ -86,7 +87,8 @@ class StockMarketSeries:
 
     def cache_real_series(self):
         for attribute, series in self.real_series.items():
-            self.provider.save_as_csv(series, f"{self.company_name}_{attribute.value.upper()}_real")
+            self.provider.save_as_csv(series, deviations_csv_path,
+                                      f"{self.company_name}_{attribute.value.upper()}_real")
 
     def cache_processed_series(self, dictionary: dict, is_mitigation: bool, suffix: str):
         for deviation, scales in dictionary.items():
@@ -96,7 +98,7 @@ class StockMarketSeries:
                     if is_mitigation:
                         mitigation_time = "_" + str(series[MitigationType.TIME])
                         series = series[MitigationType.DATA]
-                    self.provider.save_as_csv(series,
+                    self.provider.save_as_csv(series, deviations_csv_path,
                                               f"{self.company_name}_{deviation.name}_{scale.name}_{attribute.name}{mitigation_time}{suffix}")
 
     def determine_real_and_deviated_columns(self, deviation_range, source, columns) -> tuple:

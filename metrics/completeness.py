@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from inout.paths import metrics_graphs_path
 from metrics.utils import MetricLevel
 from timeseries.enums import SeriesColumn, DeviationRange, DeviationScale, DeviationSource, Mitigation
 from timeseries.timeseries import StockMarketSeries
@@ -82,7 +83,7 @@ class BlakeCompletenessMetric:
         ax[1].set_ylabel("Incompleteness metric value", size=10)
         set_ticks_size(ax, "x", 9)
         fig.tight_layout(pad=1.0)
-        save_image(plt, title)
+        save_image(plt, title, metrics_graphs_path)
         plt.show()
 
     def incompleteness_label(self, incompleteness: DeviationScale, incompleteness_range: DeviationRange):

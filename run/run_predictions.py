@@ -6,33 +6,25 @@ from predictions.model import PredictionModel
 from predictions.normal.ml import XGBoost
 from predictions.normal.nn import Reservoir, NHits
 from predictions.normal.stats import AutoArima, Ces, Garch
-from run.configuration import time_series_start, all_noises_scale, all_incompleteness_scale, all_obsolete_scale, \
-    partially_noised_scales, partially_incomplete_scales, partially_obsolete_scales, time_series_values, weights, \
-    company_names
+from run.configuration import company_names, create_stock
 from timeseries.enums import DeviationSource, DeviationScale, DeviationRange, SeriesColumn
-from timeseries.timeseries import StockMarketSeries
 
 prediction_start = 1500
 iterations = 3
-unique_ids = "--unique_ids" in sys.argv
-methods = [Reservoir]
+methods = [Ces]
 columns = [SeriesColumn.CLOSE]
+deviation_range = DeviationRange.ALL
+
 sources = [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]
 scales = [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
 is_mitigation = True
-deviation_range = DeviationRange.ALL
+graph_start = 1200
+unique_ids = "--unique_ids" in sys.argv
 
 for company_name in company_names:
-    stock = StockMarketSeries(company_name, time_series_start, time_series_values, weights,
-                              all_noised_scale=all_noises_scale,
-                              all_incomplete_scale=all_incompleteness_scale,
-                              all_obsolete_scale=all_obsolete_scale,
-                              partly_noised_scale=partially_noised_scales,
-                              partly_incomplete_scale=partially_incomplete_scales,
-                              partly_obsolete_scale=partially_obsolete_scales
-                              )
+    stock = create_stock(company_name)
 
-    base_model = PredictionModel(stock, prediction_start, columns, iterations=iterations,
+    base_model = PredictionModel(stock, prediction_start, columns, graph_start, iterations=iterations,
                                  deviation_sources=sources, deviation_scale=scales,
                                  is_deviation_mitigation=is_mitigation, deviation_range=deviation_range,
                                  unique_ids=unique_ids, is_save_predictions=True)
