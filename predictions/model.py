@@ -96,11 +96,9 @@ class PredictionModel:
 
     def create_model_deviated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices={column: self.get_series_deviated(self.deviation_range)[source][scale][column] for column in
-                    self.columns},
-            real_prices={column: self.stock.real_series[column] for column in
-                         self.columns} if source is not DeviationSource.TIMELINESS else
-            {column: self.get_series_deviated(self.deviation_range)[source][scale][column] for column in self.columns},
+            prices={column: self.get_series_deviated(self.deviation_range)[source][scale][column]
+                    for column in self.columns},
+            real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
             prediction_delay={column: self.determine_delay(source, scale, column) for column in self.columns},
             columns=self.columns,
@@ -111,12 +109,10 @@ class PredictionModel:
 
     def create_model_mitigated(self, source: DeviationSource, scale: DeviationScale):
         return self.method(
-            prices={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.DATA] for
-                    column in
-                    self.columns},
+            prices={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.DATA]
+                    for column in self.columns},
             mitigation_time={column: self.stock.mitigated_deviations_series[source][scale][column][MitigationType.TIME]
-                             for
-                             column in self.columns},
+                             for column in self.columns},
             real_prices={column: self.stock.real_series[column] for column in self.columns},
             prediction_border=self.prediction_start,
             prediction_delay={column: 0 for column in self.columns},
@@ -177,14 +173,15 @@ class PredictionModel:
             try:
                 models.insert(i, model)
                 prediction_results.insert(i, model.extrapolate(self.additional_params))
-                real, deviated = self.stock.determine_real_and_deviated_columns(self.deviation_range, sources[i], self.columns)
+                real, deviated = self.stock.determine_real_and_deviated_columns(self.deviation_range, sources[i],
+                                                                                self.columns)
                 real_columns.insert(i, real)
                 deviated_columns.insert(i, deviated)
             except Exception as e:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
 
         utils.plot_extrapolations(models, prediction_results, self.stock.company_name, self.graph_start,
-                                 real_columns, deviated_columns, save_file=save_file, shift=self.shift)
+                                  real_columns, deviated_columns, save_file=save_file, shift=self.shift)
 
     def compute_statistics_set(self, save_file=False) -> None:
         self.compute_statistics(0, DeviationSource.NONE)

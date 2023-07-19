@@ -79,11 +79,11 @@ def plot_extrapolation(model, result: dict, company_name: str, graph_start: int,
                        real_columns: list, deviated_columns: list, save_file: bool = False, shift=0) -> None:
     plt.clf()
     if model.deviation == DeviationSource.NOISE:
-        plot_defects(plt, model, graph_start)
+        plot_training(plt, model, graph_start)
         plot_actual(plt, model, graph_start)
     else:
         plot_actual(plt, model, graph_start)
-        plot_defects(plt, model, graph_start)
+        plot_training(plt, model, graph_start)
 
     plot_results(plt, model, result, graph_start)
 
@@ -100,11 +100,11 @@ def plot_extrapolations(models: list, results: list, company_name: str, graph_st
     axs_dict = {0: axs[0, 0], 1: axs[0, 1], 2: axs[1, 0], 3: axs[1, 1]}
     for i in range(0, len(models)):
         if models[i].deviation == DeviationSource.NOISE:
-            plot_defects(axs_dict[i], models[i], graph_start)
+            plot_training(axs_dict[i], models[i], graph_start)
             plot_actual(axs_dict[i], models[i], graph_start)
         else:
             plot_actual(axs_dict[i], models[i], graph_start)
-            plot_defects(axs_dict[i], models[i], graph_start)
+            plot_training(axs_dict[i], models[i], graph_start)
 
         plot_results(axs_dict[i], models[i], results[i].results, graph_start)
 
@@ -129,7 +129,7 @@ def plot_actual(axs, model, graph_start):
         i += 1
 
 
-def plot_defects(axs, model, graph_start):
+def plot_training(axs, model, graph_start):
     colors = ['royalblue', 'darkorange', 'navy', 'darkviolet'] if len(model.columns) > 1 else ['royalblue']
     i = 0
     for column, series in sort_dict(model.data_with_defects).items():
@@ -142,12 +142,12 @@ def plot_results(axs, model, result, graph_start):
     colors = ['cornflowerblue', 'orange', 'blue', 'violet'] if len(model.columns) > 1 else ['forestgreen']
     i = 0
     for column, series in sort_dict(result).items():
-        prediction_start = min_prediction_start(model.prediction_start)
+        prediction_start = model.prediction_start
         axs.plot(range(prediction_start - graph_start, prediction_start + model.predict_size - graph_start),
                  series, label=f"Extrapolation: {column.value}", linewidth='1.0', color=colors[i % len(colors)])
         i += 1
-    axs.axvline(x=model.prediction_border - graph_start, color='g', label='Prediction start', linestyle="--",
-                linewidth='1')
+    axs.axvline(x=min_prediction_start(model.training_end) - graph_start, color='g', label='Prediction start',
+                linestyle="--", linewidth='1')
 
 
 def show_titles_and_legend(graph, model, company_name, real_columns, deviated_columns, fig=None, i=None):

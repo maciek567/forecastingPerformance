@@ -1,7 +1,5 @@
 from datetime import date, datetime, timedelta
 
-from pandas import Series
-
 from timeseries.enums import SeriesColumn, DeviationScale, DeviationSource
 
 DAYS_IN_YEAR = 365
@@ -28,27 +26,14 @@ class ObsolescenceSeries:
 
     def set_all_obsolete_series(self):
         self.model.all_deviated_series[DeviationSource.TIMELINESS] = \
-            {strength: self.obsolete_all_series(self.all_obsolescence_scale[strength]) for strength in DeviationScale}
+            {strength: self.copy_real_series() for strength in DeviationScale}
 
     def set_partly_obsolete_series(self):
-        if self.partially_obsolete_scales is not None:
-            self.model.partially_deviated_series[DeviationSource.TIMELINESS] = \
-                {strength: self.obsolete_some_series(
-                    {column: strengths[strength] for column, strengths in self.partially_obsolete_scales.items()})
-                    for strength in DeviationScale}
+        self.model.partially_deviated_series[DeviationSource.TIMELINESS] = \
+            {strength: self.copy_real_series() for strength in DeviationScale}
 
-    def obsolete_all_series(self, obsoleteness_scale: int) -> dict:
-        return {column: self.single_series_with_extra_days(column.value, obsoleteness_scale) for column in
-                self.model.columns}
-
-    def obsolete_some_series(self, obsoleteness_scale: dict) -> dict:
-        return {column: self.model.real_series[column] if column not in self.partially_obsolete_scales.keys()
-        else self.single_series_with_extra_days(column.value, obsoleteness_scale[column])
-                for column in SeriesColumn}
-
-    def single_series_with_extra_days(self, column_name: SeriesColumn, extra_days: int) -> Series:
-        series = Series(list(self.model.data[column_name]), index=self.model.data["Date"])
-        return series[self.model.time_series_start:self.model.time_series_end + extra_days]
+    def copy_real_series(self):
+        return {column: self.model.real_series[column] for column in SeriesColumn}
 
     def get_ages(self, measurement_time: int = None) -> tuple:
         dates = self.model.real_series[SeriesColumn.OPEN].index.tolist()

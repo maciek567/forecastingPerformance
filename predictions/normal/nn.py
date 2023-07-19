@@ -13,7 +13,7 @@ from timeseries.enums import DeviationSource, DeviationScale
 
 
 class Reservoir(Prediction):
-    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: dict,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
                  spark=None, weights=None):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,
@@ -60,7 +60,7 @@ class Reservoir(Prediction):
 
 
 class NHits(Prediction):
-    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: int,
+    def __init__(self, prices: dict, real_prices: dict, prediction_border: int, prediction_delay: dict,
                  columns: list, deviation: DeviationSource, scale: DeviationScale, mitigation_time: dict = None,
                  spark=None, weights=None):
         super().__init__(prices, real_prices, prediction_border, prediction_delay, columns, deviation, scale,

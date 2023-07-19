@@ -34,7 +34,7 @@ for company_name in company_names:
         for method in methods:
             model = base_model.configure_model(method)
 
-            model.plot_prediction(source=DeviationSource.NONE, save_file=True)
+            # model.plot_prediction(source=DeviationSource.NONE, save_file=True)
             # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.SLIGHTLY, mitigation=False, save_file=True)
             # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.MODERATELY, mitigation=False, save_file=True)
             # model.plot_prediction(source=DeviationSource.NOISE, scale=DeviationScale.HIGHLY, mitigation=False, save_file=True)
