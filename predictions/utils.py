@@ -75,7 +75,7 @@ def normalized_columns_weights(columns, weights):
 
 
 def plot_extrapolation(model, result: dict, company_name: str, graph_start: int,
-                       real_columns: list, deviated_columns: list, save_file: bool = False) -> None:
+                       real_columns: list, deviated_columns: list, save_file: bool = False, shift=0) -> None:
     plt.clf()
     if model.deviation == DeviationSource.NOISE:
         plot_defects(model, graph_start)
@@ -88,7 +88,7 @@ def plot_extrapolation(model, result: dict, company_name: str, graph_start: int,
 
     show_titles_and_legend(model, company_name, real_columns, deviated_columns)
 
-    save_to_file(save_file, model, company_name)
+    save_to_file(save_file, model, company_name, shift)
     plt.show()
 
 
@@ -136,12 +136,14 @@ def show_titles_and_legend(model, company_name, real_columns, deviated_columns):
     plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
 
-def save_to_file(save_file, model, company_name):
+def save_to_file(save_file, model, company_name, shift):
     method = method_name(model.get_method())
     if save_file:
         os.makedirs(pred_graphs_path, exist_ok=True)
         deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
         name = f"{company_name}_{'_'.join([column.value for column in model.columns])}_{method}_{deviation}_{model.predict_size}"
+        if shift != 0:
+            name += f"_{shift}"
         path = os.path.join(pred_graphs_path, name)
         plt.savefig(f"{path}.pdf", bbox_inches='tight')
 

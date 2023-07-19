@@ -26,8 +26,8 @@ partially_obsolete_scales = \
      SeriesColumn.OPEN: {DeviationScale.SLIGHTLY: 3, DeviationScale.MODERATELY: 12, DeviationScale.HIGHLY: 30}}
 
 
-def create_stock(company_name: str, is_cache=False):
-    return StockMarketSeries(company_name, time_series_start, time_series_values, weights,
+def create_stock(company_name: str, is_cache=False, start=time_series_start):
+    return StockMarketSeries(company_name, start, time_series_values, weights,
                              all_noised_scale=all_noises_scale,
                              all_incomplete_scale=all_incompleteness_scale,
                              all_obsolete_scale=all_obsolete_scale,

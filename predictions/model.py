@@ -32,7 +32,7 @@ class PredictionModel:
     def __init__(self, stock: StockMarketSeries, prediction_start: int, columns: list, graph_start: int,
                  deviation_range: DeviationRange = DeviationRange.ALL, deviation_sources: list = None,
                  is_deviation_mitigation: bool = True, deviation_scale: list = None, iterations: int = 5,
-                 unique_ids: bool = False, is_save_predictions: bool = False):
+                 unique_ids: bool = False, is_save_predictions: bool = False, shift: int = 0):
         self.stock = stock
         self.prediction_start = prediction_start
         self.columns = columns
@@ -53,6 +53,7 @@ class PredictionModel:
         self.spark = None
         self.unique_ids = unique_ids
         self.is_save_predictions = is_save_predictions
+        self.shift = shift
 
     def get_deviation_mitigation_sources(self) -> list:
         if self.is_deviation_mitigation:
@@ -158,7 +159,7 @@ class PredictionModel:
             real_columns, deviated_columns = self.stock.determine_real_and_deviated_columns(self.deviation_range,
                                                                                             source, self.columns)
             utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name, self.graph_start,
-                                     real_columns, deviated_columns, save_file=save_file)
+                                     real_columns, deviated_columns, save_file=save_file, shift=self.shift)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 
@@ -251,6 +252,8 @@ class PredictionModel:
             os.makedirs(pred_stats_tex_path, exist_ok=True)
             values_to_predict = self.stock.data_size - self.prediction_start
             file_name = f"{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{values_to_predict}"
+            if self.shift != 0:
+                file_name += f"_{self.shift}"
             if self.unique_ids:
                 file_name += f"_{uuid.uuid4()}"
             results.to_csv(os.path.join(pred_stats_csv_path, file_name) + ".csv")
