@@ -20,7 +20,7 @@ sources = [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSourc
 scales = [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIGHLY]
 is_mitigation = True
 graph_start = 1400
-training_shifts = 15
+training_shifts = 0
 unique_ids = "--unique_ids" in sys.argv
 
 for company_name in company_names:
@@ -44,6 +44,12 @@ for company_name in company_names:
             # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.SLIGHTLY, save_file=True)
             # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.MODERATELY,save_file=True)
             # model.plot_prediction(source=DeviationSource.TIMELINESS, scale=DeviationScale.HIGHLY, save_file=True)
+
+            model.plot_group(sources=[DeviationSource.NONE, DeviationSource.NOISE, DeviationSource.INCOMPLETENESS,
+                                      DeviationSource.TIMELINESS],
+                             scales=[None, DeviationScale.MODERATELY, DeviationScale.MODERATELY,
+                                     DeviationScale.MODERATELY],
+                             mitigations=[False, False, False, False], save_file=True)
 
             model.compute_statistics_set(save_file=True)
 

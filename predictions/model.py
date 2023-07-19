@@ -163,6 +163,29 @@ class PredictionModel:
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 
+    def plot_group(self, sources: list, scales: list, mitigations: list, save_file: bool = False):
+        models = []
+        prediction_results = []
+        real_columns, deviated_columns = [], []
+        for i in range(0, len(sources)):
+            if sources[i] == DeviationSource.NONE:
+                model = self.model_real
+            elif not mitigations[i]:
+                model = self.model_deviated[sources[i]][scales[i]]
+            else:
+                model = self.model_mitigated[sources[i]][scales[i]]
+            try:
+                models.insert(i, model)
+                prediction_results.insert(i, model.extrapolate(self.additional_params))
+                real, deviated = self.stock.determine_real_and_deviated_columns(self.deviation_range, sources[i], self.columns)
+                real_columns.insert(i, real)
+                deviated_columns.insert(i, deviated)
+            except Exception as e:
+                warnings.warn("Prediction method thrown an exception: " + str(e))
+
+        utils.plot_extrapolations(models, prediction_results, self.stock.company_name, self.graph_start,
+                                 real_columns, deviated_columns, save_file=save_file, shift=self.shift)
+
     def compute_statistics_set(self, save_file=False) -> None:
         self.compute_statistics(0, DeviationSource.NONE)
         real = self.compute_statistics(1, DeviationSource.NONE)
