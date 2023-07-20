@@ -5,21 +5,11 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from numpy import sqrt, mean
-from pandas import Series, DataFrame
+from pandas import DataFrame
 
 from inout.paths import pred_graphs_path
 from timeseries.enums import DeviationSource, SeriesColumn
 from util.graphs import TIME_DAYS_LABEL, PRICE_USD_LABEL
-
-
-def normalize(series: Series, original_series: Series) -> DataFrame:
-    df = DataFrame((series - original_series.min()) / (original_series.max() - original_series.min()))
-    df.columns = ["y"]
-    return df
-
-
-def denormalize(series: ndarray, original_series: Series) -> ndarray:
-    return series * (original_series.max() - original_series.min()) + original_series.min()
 
 
 def calculate_rmse(actual: ndarray, result: ndarray) -> float:
@@ -68,6 +58,12 @@ def extract_predictions(df, results_name) -> dict:
     df["unique_id"] = df["unique_id"].astype(int)
     dfs = dict(tuple(df.groupby("unique_id")))
     return {get_column_by_id(column_id): results[results_name] for column_id, results in dfs.items()}
+
+
+def cut_extrapolation(extrapolation, prediction_delay, columns, data_to_validate):
+    return {
+        column: extrapolation[column][prediction_delay[column]:prediction_delay[column] + len(data_to_validate[column])]
+        for column in columns}
 
 
 def normalized_columns_weights(columns, weights):
@@ -143,7 +139,7 @@ def plot_results(axs, model, result, graph_start):
     i = 0
     for column, series in sort_dict(result).items():
         prediction_start = model.prediction_start
-        axs.plot(range(prediction_start - graph_start, prediction_start + model.predict_size - graph_start),
+        axs.plot(range(prediction_start - graph_start, prediction_start + model.validation_size - graph_start),
                  series, label=f"Extrapolation: {column.value}", linewidth='1.0', color=colors[i % len(colors)])
         i += 1
     axs.axvline(x=min_prediction_start(model.training_end) - graph_start, color='g', label='Prediction start',
@@ -178,7 +174,7 @@ def save_to_file(save_file, model, company_name, shift, group=False):
         os.makedirs(pred_graphs_path, exist_ok=True)
         deviation = f'{model.deviation.value}' + (f'_{model.scale.value}' if model.scale is not None else "")
         name = f"{company_name}_{'_'.join([column.value for column in model.columns])}_{method}"
-        name += f"_{deviation}_{model.predict_size}" if not group else f"_group_{model.predict_size}"
+        name += f"_{deviation}_{model.validation_size}" if not group else f"_group_{model.validation_size}"
         if shift != 0:
             name += f"_{shift}"
         path = os.path.join(pred_graphs_path, name)

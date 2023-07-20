@@ -4,7 +4,6 @@ from timeseries.timeseries import StockMarketSeries
 # company_names = ['AMD', 'Accenture', 'Acer', 'Activision', 'Adobe', 'Akamai', 'Alibaba', 'Amazon', 'Apple', 'At&t',
 #                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
 #                  'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
-# methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
 
 company_names = ["Facebook"]
 time_series_start = "2017-01-03"

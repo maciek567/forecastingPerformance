@@ -8,7 +8,7 @@ from pandas import Series
 from pyEsn.ESN import ESN
 
 from predictions.prediction import Prediction, PredictionStats, PredictionResults, PredictionResSimple
-from predictions.utils import prepare_sf_dataframe, extract_predictions
+from predictions.utils import prepare_sf_dataframe, extract_predictions, cut_extrapolation
 from timeseries.enums import DeviationSource, DeviationScale
 
 
@@ -49,8 +49,9 @@ class Reservoir(Prediction):
             res_dict[column] = PredictionResults(results=result,
                                                  start_time=start_time, model_time=fit_time,
                                                  prediction_time=prediction_time)
-
-        return PredictionResSimple(results={column: results.results for column, results in res_dict.items()},
+        results = {column: results.results for column, results in res_dict.items()}
+        results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
+        return PredictionResSimple(results=results,
                                    model_time=sum([results.model_time for results in res_dict.values()]),
                                    prediction_time=sum([results.prediction_time for results in res_dict.values()]))
 
@@ -86,8 +87,9 @@ class NHits(Prediction):
         extrapolation = nf.predict()
         prediction_time = time.perf_counter_ns()
 
-        result = extract_predictions(extrapolation, "AutoNHITS")
-        return PredictionResults(results=result, start_time=start_time, model_time=fit_time,
+        results = extract_predictions(extrapolation, "AutoNHITS")
+        results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
+        return PredictionResults(results=results, start_time=start_time, model_time=fit_time,
                                  prediction_time=prediction_time)
 
     @staticmethod

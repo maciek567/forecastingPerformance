@@ -56,8 +56,8 @@ class Prediction:
         self.data_to_validate = {column: Series(real_prices.values[prediction_border:]) for column, real_prices in
                                  real_prices_dict.items()}
         self.actual_data = real_prices_dict
-        self.predict_size = len(list(self.data_to_validate.values())[0])
-        self.train_and_pred_size = {column: self.training_size[column] + self.predict_size for column in columns}
+        self.validation_size = len(list(self.data_to_validate.values())[0])
+        self.predict_size = self.validation_size + max(list(prediction_delay.values()))
         self.columns = columns
         self.weights = weights
         self.deviation = deviation

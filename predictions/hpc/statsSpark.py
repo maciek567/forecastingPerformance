@@ -5,7 +5,7 @@ from statsforecast.models import AutoARIMA
 from statsforecast.models import AutoCES
 
 from predictions.prediction import Prediction, PredictionStats, PredictionResults
-from predictions.utils import prepare_sf_dataframe, prepare_spark_dataframe, extract_predictions
+from predictions.utils import prepare_sf_dataframe, prepare_spark_dataframe, extract_predictions, cut_extrapolation
 from timeseries.enums import DeviationSource, DeviationScale
 
 
@@ -40,8 +40,9 @@ class AutoArimaSpark(Prediction):
         extrapolation = sf.forecast(df=sdf, h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
-        result = extract_predictions(extrapolation.toPandas(), "AutoARIMA")
-        return PredictionResults(results=result, parameters=params,
+        results = extract_predictions(extrapolation.toPandas(), "AutoARIMA")
+        results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
+        return PredictionResults(results=results, parameters=params,
                                  start_time=start_time, model_time=fit_time,
                                  prediction_time=prediction_time - (fit_time - start_time))
 
@@ -80,8 +81,9 @@ class CesSpark(Prediction):
         extrapolation = sf.forecast(df=sdf, h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
-        result = extract_predictions(extrapolation.toPandas(), "CES")
-        return PredictionResults(results=result,
+        results = extract_predictions(extrapolation.toPandas(), "CES")
+        results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
+        return PredictionResults(results=results,
                                  start_time=start_time, model_time=fit_time,
                                  prediction_time=prediction_time - (fit_time - start_time))
 

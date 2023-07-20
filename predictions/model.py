@@ -250,7 +250,9 @@ class PredictionModel:
             avg_results = {}
             for column in self.columns:
                 avg_results[column.value] = sum([stats.results[column].values for stats in results]) / len(results)
+                avg_results[f"{column.value} - real"] = self.model_real.data_to_validate[column].values
             df = DataFrame(avg_results)
+
             values_to_predict = self.stock.data_size - self.prediction_start
             deviation = f'{source.value}' + (f'_{scale.value}' if scale is not None else "")
             file_name = f"{self.stock.company_name}_{'-'.join(column.value for column in self.columns)}_{utils.method_name(self.method)}_{deviation}_{values_to_predict}"
