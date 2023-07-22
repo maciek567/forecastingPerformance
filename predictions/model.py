@@ -10,6 +10,7 @@ from inout.intermediate import IntermediateProvider
 from inout.paths import pred_stats_csv_path, pred_results_path, pred_stats_tex_path
 from predictions import utils
 from predictions.conditions import do_method_return_extra_params
+from predictions.graphs import plot_extrapolations, plot_extrapolation
 from predictions.spark import handle_spark
 from timeseries.enums import sources_short, scales_short, mitigation_short, MitigationType, DeviationScale, Mitigation
 from timeseries.timeseries import StockMarketSeries, DeviationRange, DeviationSource
@@ -154,8 +155,8 @@ class PredictionModel:
 
             real_columns, deviated_columns = self.stock.determine_real_and_deviated_columns(self.deviation_range,
                                                                                             source, self.columns)
-            utils.plot_extrapolation(model, prediction_results.results, self.stock.company_name, self.graph_start,
-                                     real_columns, deviated_columns, save_file=save_file, shift=self.shift)
+            plot_extrapolation(model, prediction_results.results, self.stock.company_name, self.graph_start,
+                               real_columns, deviated_columns, save_file=save_file, shift=self.shift)
         except Exception as e:
             warnings.warn("Prediction method thrown an exception: " + str(e))
 
@@ -180,8 +181,8 @@ class PredictionModel:
             except Exception as e:
                 warnings.warn("Prediction method thrown an exception: " + str(e))
 
-        utils.plot_extrapolations(models, prediction_results, self.stock.company_name, self.graph_start,
-                                  real_columns, deviated_columns, save_file=save_file, shift=self.shift)
+        plot_extrapolations(models, prediction_results, self.stock.company_name, self.graph_start,
+                            real_columns, deviated_columns, save_file=save_file, shift=self.shift)
 
     def compute_statistics_set(self, save_file=False) -> None:
         self.compute_statistics(0, DeviationSource.NONE)

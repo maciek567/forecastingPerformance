@@ -43,8 +43,8 @@ class XGBoostSpark(Prediction):
         extrapolation = fcst.predict(horizon=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
-        extrapolation_df = extrapolation.toPandas()[-self.predict_size:]
-        results = extract_predictions(extrapolation_df, "SparkXGBForecast")
+        results_with_training = extract_predictions(extrapolation.toPandas(), "SparkXGBForecast")
+        results = {column: results_with_training[column][-self.predict_size:] for column in self.columns}
         results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
         return PredictionResults(results=results,
                                  start_time=start_time, model_time=fit_time, prediction_time=prediction_time)

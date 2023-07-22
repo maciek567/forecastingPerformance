@@ -3,8 +3,7 @@ import time
 
 from pandas import Series
 
-from predictions import utils
-from predictions.utils import normalized_columns_weights
+from predictions import utils, metrics
 from timeseries.enums import DeviationSource, DeviationScale
 
 
@@ -72,12 +71,12 @@ class Prediction:
         elapsed_time = time.perf_counter_ns()
         gc.enable()
 
-        weights = normalized_columns_weights(self.columns, self.weights)
+        weights = utils.normalized_columns_weights(self.columns, self.weights)
         rmse, mae, mape = 0.0, 0.0, 0.0
         for column, series in self.data_to_validate.items():
-            rmse += utils.calculate_rmse(series.values, extrapolation.results[column].values) * weights[column]
-            mae += utils.calculate_mae(series.values, extrapolation.results[column].values) * weights[column]
-            mape += utils.calculate_mape(series.values, extrapolation.results[column].values) * weights[column]
+            rmse += metrics.calculate_rmse(series.values, extrapolation.results[column].values) * weights[column]
+            mae += metrics.calculate_mae(series.values, extrapolation.results[column].values) * weights[column]
+            mape += metrics.calculate_mape(series.values, extrapolation.results[column].values) * weights[column]
 
         results = PredictionStats(results=extrapolation.results, parameters=extrapolation.parameters,
                                   start_time=start_time, elapsed_time=elapsed_time,

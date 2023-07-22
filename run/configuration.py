@@ -1,11 +1,11 @@
 from timeseries.enums import SeriesColumn, DeviationScale
 from timeseries.timeseries import StockMarketSeries
 
-# company_names = ['AMD', 'Accenture', 'Acer', 'Activision', 'Adobe', 'Akamai', 'Alibaba', 'Amazon', 'Apple', 'At&t',
-#                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM', 'Intel',
+# company_names = ['AMD', 'Accenture', 'Activision', 'Adobe', 'Akamai', 'Amazon', 'Apple', 'At&t',
+#                  'Autodesk', 'Canon', 'Capgemini', 'Cisco', 'Ericsson', 'Facebook', 'Google', 'HP', 'IBM',
 #                  'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
 
-company_names = ["Facebook"]
+company_names = ["IBM"]
 time_series_start = "2017-01-03"
 time_series_values = 1515
 

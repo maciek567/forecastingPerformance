@@ -19,32 +19,23 @@ class AutoArimaSpark(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
-    @staticmethod
-    def create_model():
-        return StatsForecast(
-            models=[AutoARIMA()],
-            freq='D',
-        )
-
     def extrapolate(self, params: dict) -> PredictionResults:
         df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
         sdf = prepare_spark_dataframe(df, self.spark)
 
         start_time = time.perf_counter_ns()
-        sf_fit = self.create_model()
-        sf_fit.fit(df=df)
-        params = sf_fit.fitted_[0][0].model_['arma']
-        fit_time = time.perf_counter_ns()
-
-        sf = self.create_model()
+        sf = StatsForecast(
+            models=[AutoARIMA()],
+            freq='D',
+        )
         extrapolation = sf.forecast(df=sdf, h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
         results = extract_predictions(extrapolation.toPandas(), "AutoARIMA")
         results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
-        return PredictionResults(results=results, parameters=params,
-                                 start_time=start_time, model_time=fit_time,
-                                 prediction_time=prediction_time - (fit_time - start_time))
+        return PredictionResults(results=results,
+                                 start_time=start_time, model_time=start_time,
+                                 prediction_time=prediction_time)
 
     @staticmethod
     def get_method():
@@ -61,31 +52,23 @@ class CesSpark(Prediction):
     def extrapolate_and_measure(self, params: dict) -> PredictionStats:
         return super().execute_and_measure(self.extrapolate, params)
 
-    @staticmethod
-    def create_model():
-        return StatsForecast(
-            models=[AutoCES()],
-            freq='D',
-        )
-
     def extrapolate(self, params: dict) -> PredictionResults:
         df = prepare_sf_dataframe(self.data_to_learn, self.training_size)
         sdf = prepare_spark_dataframe(df, self.spark)
 
         start_time = time.perf_counter_ns()
-        sf_fit = self.create_model()
-        sf_fit.fit(df=sdf)
-        fit_time = time.perf_counter_ns()
-
-        sf = self.create_model()
+        sf = StatsForecast(
+            models=[AutoCES()],
+            freq='D',
+        )
         extrapolation = sf.forecast(df=sdf, h=self.predict_size)
         prediction_time = time.perf_counter_ns()
 
         results = extract_predictions(extrapolation.toPandas(), "CES")
         results = cut_extrapolation(results, self.prediction_delay, self.columns, self.data_to_validate)
         return PredictionResults(results=results,
-                                 start_time=start_time, model_time=fit_time,
-                                 prediction_time=prediction_time - (fit_time - start_time))
+                                 start_time=start_time, model_time=start_time,
+                                 prediction_time=prediction_time)
 
     @staticmethod
     def get_method():

@@ -42,19 +42,3 @@ def plot_series(stock, title: str, **kwargs) -> None:
     set_legend(ax)
     save_image(plt, title, deviations_graph_path)
     plt.show()
-
-
-def plot_returns(data_to_learn_and_validate):
-    plt.figure(figsize=(10, 4))
-    plt.plot(data_to_learn_and_validate)
-    plt.ylabel('Return', fontsize=20)
-
-
-def plot_pacf(data_to_learn):
-    plot_pacf(data_to_learn)
-    plt.show()
-
-
-def plot_acf(data_to_learn):
-    plot_acf(data_to_learn)
-    plt.show()
