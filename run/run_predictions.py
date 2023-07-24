@@ -7,7 +7,7 @@ from predictions.model import PredictionModel
 from predictions.normal.ml import XGBoost
 from predictions.normal.nn import Reservoir, NHits
 from predictions.normal.stats import AutoArima, Ces, Garch
-from run.configuration import company_names, create_stock
+from run.configuration import company_names, create_stock, columns
 from timeseries.enums import DeviationSource, DeviationScale, DeviationRange, SeriesColumn
 
 # methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
@@ -15,7 +15,6 @@ from timeseries.enums import DeviationSource, DeviationScale, DeviationRange, Se
 prediction_start = 1500
 iterations = 3
 methods = [Ces]
-columns = [SeriesColumn.CLOSE]
 deviation_range = DeviationRange.ALL
 
 sources = [DeviationSource.NOISE, DeviationSource.INCOMPLETENESS, DeviationSource.TIMELINESS]

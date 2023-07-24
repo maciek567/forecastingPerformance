@@ -6,6 +6,7 @@ from timeseries.timeseries import StockMarketSeries
 #                  'Mastercard', 'Microsoft', 'Motorola', 'Nokia', 'Nvidia', 'Oracle', 'Sony', 'Tmobile']
 
 company_names = ["IBM"]
+columns = [SeriesColumn.CLOSE]
 time_series_start = "2017-01-03"
 time_series_values = 1515
 

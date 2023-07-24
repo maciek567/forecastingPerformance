@@ -21,17 +21,20 @@ class HeinrichCorrectnessMetric:
     def heinrich_values(self, noised: float, real: float, alpha: float) -> float:
         return 1 - self.d(noised, real, alpha)
 
-    def heinrich_tuples(self, noised: dict, real: dict, alpha: dict) -> float:
+    def heinrich_tuples(self, noised: dict, real: dict, alpha: dict, columns: list) -> float:
         quality_sum = 0
         weights = self.stock.weights
-        for column in SeriesColumn:
-            quality_sum += self.heinrich_values(noised[column], real[column], alpha[column]) * weights[column]
-        return quality_sum / sum(weights.values())
+        weights = {column: weights[column] for column in columns} if columns else weights
+        weights_normalized = self.stock.normalize_weights(weights)
+        for column in (SeriesColumn if columns is None else columns):
+            quality_sum += self.heinrich_values(noised[column], real[column], alpha[column]) * weights_normalized[
+                column]
+        return quality_sum / sum(weights_normalized.values())
 
-    def heinrich_relation(self, noised: list, real: list, alpha: dict) -> float:
+    def heinrich_relation(self, noised: list, real: list, alpha: dict, columns: list) -> float:
         quality_sum = 0
         for i in range(len(noised)):
-            quality_sum += self.heinrich_tuples(noised[i], real[i], alpha)
+            quality_sum += self.heinrich_tuples(noised[i], real[i], alpha, columns)
         return quality_sum / len(noised)
 
     def values_qualities(self, column: SeriesColumn, is_alpha: bool = True) -> dict:
@@ -46,20 +49,21 @@ class HeinrichCorrectnessMetric:
 
         return qualities
 
-    def tuples_qualities(self, noise_range: DeviationRange = DeviationRange.ALL, is_alpha: bool = True):
+    def tuples_qualities(self, noise_range: DeviationRange = DeviationRange.ALL, is_alpha: bool = True,
+                         columns: list = None):
         alpha = self.get_alpha(is_alpha)
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         qualities = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.data_size):
-            real_tuple = self.stock.get_dict_for_tuple(self.stock.real_series, i)
+            real_tuple = self.stock.get_dict_for_tuple(self.stock.real_series, i, columns)
             for scale in DeviationScale:
                 qualities[scale].append(self.heinrich_tuples(self.stock.get_dict_for_tuple(deviated_series[scale], i),
-                                                             real_tuple, alpha))
+                                                             real_tuple, alpha, columns))
 
         return qualities
 
-    def relation_qualities(self, noise_range: DeviationRange, is_alpha: bool = True) -> dict:
+    def relation_qualities(self, noise_range: DeviationRange, is_alpha: bool = True, columns: list = None) -> dict:
         alpha = self.get_alpha(is_alpha)
         deviated_series = self.stock.get_deviated_series(DeviationSource.NOISE, noise_range)
         mitigated_series = self.stock.get_mitigated_series(DeviationSource.NOISE, noise_range)
@@ -68,14 +72,15 @@ class HeinrichCorrectnessMetric:
         mitigated_tuples = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.data_size):
-            real_tuples.append(self.stock.get_dict_for_tuple(self.stock.real_series, i))
+            real_tuples.append(self.stock.get_dict_for_tuple(self.stock.real_series, i, columns))
             for scale in DeviationScale:
-                deviated_tuples[scale].append(self.stock.get_dict_for_tuple(deviated_series[scale], i))
-                mitigated_tuples[scale].append(self.stock.get_dict_for_tuple(mitigated_series[scale], i))
+                deviated_tuples[scale].append(self.stock.get_dict_for_tuple(deviated_series[scale], i, columns))
+                mitigated_tuples[scale].append(self.stock.get_dict_for_tuple(mitigated_series[scale], i, columns))
 
-        return {scale: {Mitigation.NOT_MITIGATED: self.heinrich_relation(deviated_tuples[scale], real_tuples, alpha),
-                        Mitigation.MITIGATED: self.heinrich_relation(mitigated_tuples[scale], real_tuples, alpha)}
-                for scale in DeviationScale}
+        return {scale: {
+            Mitigation.NOT_MITIGATED: self.heinrich_relation(deviated_tuples[scale], real_tuples, alpha, columns),
+            Mitigation.MITIGATED: self.heinrich_relation(mitigated_tuples[scale], real_tuples, alpha, columns)}
+            for scale in DeviationScale}
 
     def get_alpha(self, is_alpha: bool) -> dict:
         return self.custom_alpha if is_alpha else self.default_alpha
@@ -83,9 +88,11 @@ class HeinrichCorrectnessMetric:
     def draw_heinrich_qualities(self, qualities: dict,
                                 level: MetricLevel, is_alpha: bool,
                                 noise_range: DeviationRange = DeviationRange.ALL,
-                                column_name: SeriesColumn = None) -> None:
+                                column_name: SeriesColumn = None,
+                                graph_size: int = -1) -> None:
         fig = plt.figure(figsize=(10, 4))
         ax = fig.add_subplot(111, axisbelow=True)
+        qualities = {scale: series[-graph_size:] if graph_size != -1 else series for scale, series in qualities.items()}
         ax.plot(qualities[DeviationScale.SLIGHTLY], "b", lw=1,
                 label=f"Weak noise: std={self.noises_label(DeviationScale.SLIGHTLY, noise_range)}")
         ax.plot(qualities[DeviationScale.MODERATELY], "r", lw=1,

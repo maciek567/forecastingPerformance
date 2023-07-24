@@ -30,10 +30,11 @@ def set_ticks_size(ax, axis, size):
     ax[2].tick_params(axis=axis, labelsize=size)
 
 
-def plot_series(stock, title: str, **kwargs) -> None:
+def plot_series(stock, size: int, title: str, **kwargs) -> None:
     fig = plt.figure(figsize=(10, 4))
     ax = fig.add_subplot(111, axisbelow=True)
     for label, series in (kwargs.items()):
+        series = series[-size:] if size != -1 else series
         ax.plot(series.values, markersize=1.0, label=label)
     title = f"{stock.company_name} {title}"
     ax.set_title(title)

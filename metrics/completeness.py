@@ -38,38 +38,40 @@ class BlakeCompletenessMetric:
 
         return qualities
 
-    def tuples_qualities(self, incompleteness_range: DeviationRange = DeviationRange.ALL) -> dict:
+    def tuples_qualities(self, incompleteness_range: DeviationRange = DeviationRange.ALL, columns: list = None) -> dict:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         qualities = {scale: [] for scale in DeviationScale}
 
         for i in range(self.stock.data_size):
             for scale in DeviationScale:
-                qualities[scale].append(self.blake_tuples(self.stock.get_list_for_tuple(deviated_series[scale], i)))
+                qualities[scale].append(
+                    self.blake_tuples(self.stock.get_list_for_tuple(deviated_series[scale], i, columns)))
 
         return qualities
 
-    def relation_qualities(self, incompleteness_range: DeviationRange) -> dict:
+    def relation_qualities(self, incompleteness_range: DeviationRange, columns: list = None) -> dict:
         deviated_series = self.stock.get_deviated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         mitigated_series = self.stock.get_mitigated_series(DeviationSource.INCOMPLETENESS, incompleteness_range)
         deviated_tuples = {scale: [] for scale in DeviationScale}
         mitigated_tuples = {scale: [] for scale in DeviationScale}
         for i in range(self.stock.data_size):
             for scale in DeviationScale:
-                deviated_tuples[scale].append(self.stock.get_list_for_tuple(deviated_series[scale], i))
-                mitigated_tuples[scale].append(self.stock.get_list_for_tuple(mitigated_series[scale], i))
+                deviated_tuples[scale].append(self.stock.get_list_for_tuple(deviated_series[scale], i, columns))
+                mitigated_tuples[scale].append(self.stock.get_list_for_tuple(mitigated_series[scale], i, columns))
         return {scale: {Mitigation.NOT_MITIGATED: self.blake_relation(deviated_tuples[scale]),
                         Mitigation.MITIGATED: self.blake_relation(mitigated_tuples[scale])}
                 for scale in DeviationScale}
 
     def draw_blake(self, qualities: dict, level: MetricLevel,
                    incompleteness_range: DeviationRange = DeviationRange.ALL,
-                   column_name: SeriesColumn = None) -> None:
+                   column_name: SeriesColumn = None, graph_size: int = -1) -> None:
         fig, ax = plt.subplots(3, 1, figsize=(8, 4))
 
         range_title = ", " + incompleteness_range.value + " affected" if level == MetricLevel.TUPLES else ""
         column = column_name.value if column_name is not None else "all columns"
         title = f"Blake's metric {column} prices [{level.value}{range_title}]"
         fig.suptitle(title, size=12)
+        qualities = {scale: series[-graph_size:] if graph_size != -1 else series for scale, series in qualities.items()}
         ax[0].plot(qualities[DeviationScale.SLIGHTLY], "o", color="b", markersize=2)
         ax[1].plot(qualities[DeviationScale.MODERATELY], "o", color="g", markersize=2)
         ax[2].plot(qualities[DeviationScale.HIGHLY], "o", color="r", markersize=2)

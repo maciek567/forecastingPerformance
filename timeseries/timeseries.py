@@ -44,12 +44,12 @@ class StockMarketSeries:
         return series[self.time_series_start:self.time_series_end]
 
     @staticmethod
-    def get_list_for_tuple(series: dict, i: int) -> list:
-        return [series[column][i] for column in SeriesColumn]
+    def get_list_for_tuple(series: dict, i: int, columns: list = None) -> list:
+        return [series[column][i] for column in (SeriesColumn if columns is None else columns)]
 
     @staticmethod
-    def get_dict_for_tuple(series: dict, i: int) -> dict:
-        return {column: series[column][i] for column in SeriesColumn}
+    def get_dict_for_tuple(series: dict, i: int, columns: list = None) -> dict:
+        return {column: series[column][i] for column in (SeriesColumn if columns is None else columns)}
 
     def get_deviated_series(self, source: DeviationSource,
                             deviation_range: DeviationRange = DeviationRange.ALL) -> dict:
@@ -80,7 +80,7 @@ class StockMarketSeries:
         return {column: weight / sum([w for w in weights.values()]) for column, weight in weights.items()}
 
     def cache_series_set(self):
-        self.provider.remove_current_files()
+       # self.provider.remove_current_files()
         self.cache_real_series()
         self.cache_processed_series(self.all_deviated_series, False, "_deviated")
         self.cache_processed_series(self.mitigated_deviations_series, True, "_mitigated")

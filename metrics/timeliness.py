@@ -42,7 +42,7 @@ class HeinrichTimelinessMetric:
 
         return deltas, qualities
 
-    def tuples_qualities(self, obsoleteness_range: DeviationRange) -> tuple:
+    def tuples_qualities(self) -> tuple:
         deltas = {}
         qualities = {scale: [] for scale in DeviationScale}
 
@@ -53,8 +53,11 @@ class HeinrichTimelinessMetric:
 
         return deltas, qualities
 
-    def relation_qualities(self, obsoleteness_range: DeviationRange) -> dict:
+    def relation_qualities(self, obsoleteness_range: DeviationRange, columns: list = None) -> dict:
         if obsoleteness_range == DeviationRange.ALL:
+            if columns != [] and columns is not None:
+                raise Exception("Columns can be specified only for partial range.")
+
             ages = {scale: [] for scale in DeviationScale}
 
             for scale in DeviationScale:
@@ -64,10 +67,11 @@ class HeinrichTimelinessMetric:
                     for scale in DeviationScale}
 
         else:
+            columns = self.stock.columns if (columns is None or columns == []) else columns
             ages = {scale: {column: [] for column in SeriesColumn} for scale in DeviationScale}
             real, deviated = self.stock.determine_real_and_deviated_columns(DeviationRange.PARTIAL,
-                                                                            DeviationSource.TIMELINESS,
-                                                                            self.stock.columns)
+                                                                            DeviationSource.TIMELINESS, columns)
+
             for scale in DeviationScale:
                 for column in real:
                     time_diffs, ages[scale][column] = self.stock.obsolescence.get_ages(0)
@@ -76,7 +80,7 @@ class HeinrichTimelinessMetric:
 
             return {scale: {Mitigation.NOT_MITIGATED: sum(
                 [self.timeliness_relations(self.declines, ages[scale][column]) * self.stock.weights[column]
-                 for column in SeriesColumn])}
+                 for column in columns])}
                 for scale in DeviationScale}
 
     def draw_timeliness_qualities(self, times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
