@@ -2,7 +2,8 @@ import os
 
 stock_path = os.path.join("..", "data", "timeseries")
 
-metrics_scores_path = os.path.join("..", "data", "metrics", "scores")
+metrics_scores_csv_path = os.path.join("..", "data", "metrics", "csv")
+metrics_scores_tex_path = os.path.join("..", "data", "metrics", "tex")
 metrics_graphs_path = os.path.join("..", "data", "metrics", "graphs")
 
 deviations_csv_path = os.path.join("..", "data", "deviations", "csv")
@@ -14,3 +15,5 @@ pred_graphs_path = os.path.join("..", "data", "predictions", "graphs")
 pred_results_path = os.path.join("..", "data", "predictions", "results")
 
 aggregation_path = os.path.join("..", "data", "aggregation")
+aggregation_path_metrics = os.path.join("..", "data", "aggregation", "metrics")
+aggregation_path_predictions = os.path.join("..", "data", "aggregation", "predictions")

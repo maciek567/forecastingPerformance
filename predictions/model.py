@@ -264,12 +264,9 @@ class PredictionModel:
         pd.set_option("display.precision", 2)
         header = \
             f"Statistics [{self.stock.company_name} stock, {','.join(column.value for column in self.columns)} prices, {self.iterations} iterations]\n"
-        text = results.to_string()
-        latex = results.to_latex(index=False,
-                                 formatters={"name": str.upper},
-                                 float_format="{:.2f}".format)
+
         if not save_file:
-            print(header + "\n" + text + "\n\n" + latex)
+            print(header + "\n" + results.to_string())
         else:
             os.makedirs(pred_stats_csv_path, exist_ok=True)
             os.makedirs(pred_stats_tex_path, exist_ok=True)
@@ -279,5 +276,5 @@ class PredictionModel:
                 file_name += f"_{self.shift}"
             if self.unique_ids:
                 file_name += f"_{uuid.uuid4()}"
-            results.to_csv(os.path.join(pred_stats_csv_path, file_name) + ".csv")
-            IntermediateProvider().save_latex(latex, pred_stats_tex_path, file_name)
+            IntermediateProvider().save_csv(results, pred_stats_csv_path, file_name)
+            IntermediateProvider().save_as_tex(results, pred_stats_tex_path, file_name, precision=2)

@@ -1,9 +1,9 @@
 from metrics.completeness import BlakeCompletenessMetric
 from metrics.correctness import HeinrichCorrectnessMetric
 from metrics.timeliness import HeinrichTimelinessMetric
-from metrics.utils import print_relation_results
+from metrics.utils import present_relation_results
 from run.configuration import company_names, create_stock, columns
-from timeseries.enums import DeviationScale, SeriesColumn, DeviationRange
+from timeseries.enums import DeviationScale, SeriesColumn, DeviationRange, DeviationSource
 
 alpha = {SeriesColumn.OPEN: 0.5,
          SeriesColumn.CLOSE: 0.5,
@@ -30,13 +30,14 @@ for company_name in company_names:
         HeinrichTimelinessMetric(stock, declines, measurement_times)]
 
     for metric in metrics:
-        qualities_close = metric.relation_qualities(DeviationRange.ALL, columns=columns)
-        print_relation_results(metric.get_deviation_name(), company_name, qualities_close,
-                               columns=[SeriesColumn.CLOSE], verbose=False)
+        deviation_range = DeviationRange.ALL if metric.get_deviation_name() != DeviationSource.TIMELINESS else DeviationRange.PARTIAL
+        qualities_close = metric.relation_qualities(deviation_range, columns=columns)
+        present_relation_results(metric.get_deviation_name(), company_name, qualities_close,
+                                 columns=[SeriesColumn.CLOSE], verbose=False)
 
         qualities_all = metric.relation_qualities(DeviationRange.ALL)
         qualities_partial = metric.relation_qualities(DeviationRange.PARTIAL)
-        print_relation_results(metric.get_deviation_name(), company_name, qualities_all, qualities_partial,
-                               verbose=False)
+        present_relation_results(metric.get_deviation_name(), company_name, qualities_all, qualities_partial,
+                                 verbose=False)
 
 print("DONE")

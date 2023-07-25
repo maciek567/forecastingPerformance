@@ -3,7 +3,7 @@ from enum import Enum
 from pandas import DataFrame, concat
 
 from inout.intermediate import IntermediateProvider
-from inout.paths import metrics_scores_path
+from inout.paths import metrics_scores_tex_path, metrics_scores_csv_path
 from timeseries.enums import DeviationRange, DeviationSource, DeviationScale, Mitigation, mitigation_short
 
 
@@ -19,8 +19,8 @@ mitigation_label = "Improve"
 metric_score_label = "Score"
 
 
-def print_relation_results(source: DeviationSource, company_name: str, qualities_all: dict,
-                           qualities_partial: dict = None, columns: list = None, verbose: bool = True) -> None:
+def present_relation_results(source: DeviationSource, company_name: str, qualities_all: dict,
+                             qualities_partial: dict = None, columns: list = None, verbose: bool = True) -> None:
     results = DataFrame(
         columns=[deviation_range_label, deviation_scale_label, mitigation_label, metric_score_label])
     for deviation_range in (DeviationRange if qualities_partial is not None else [DeviationRange.ALL]):
@@ -34,20 +34,16 @@ def print_relation_results(source: DeviationSource, company_name: str, qualities
                           metric_score_label: qualities[scale][mitigation]}
                 results = concat([results, DataFrame([result])], ignore_index=True)
 
+    manage_output(results, source, company_name, columns, verbose=verbose)
+
+
+def manage_output(results, source: DeviationSource, company_name: str, columns: list,
+                  verbose: bool) -> None:
     if verbose:
         print(f"Relation quality differences for {source.value} series:")
         print(results)
-        print()
-    print_relation_results_to_latex(results, source, company_name, columns, verbose=verbose)
 
-
-def print_relation_results_to_latex(results, source: DeviationSource, company_name: str, columns: list,
-                                    verbose: bool) -> None:
-    latex = results.to_latex(index=False,
-                             formatters={"name": str.upper},
-                             float_format="{:.3f}".format)
-    if verbose:
-        print(latex)
     cols = 'all-columns' if columns is None else '-'.join(column.value for column in columns)
     name = f"{company_name}_{cols}_{source.value}"
-    IntermediateProvider.save_latex(latex, metrics_scores_path, name)
+    IntermediateProvider.save_csv(results, metrics_scores_csv_path, name)
+    IntermediateProvider.save_as_tex(results, metrics_scores_tex_path, name, precision=3)

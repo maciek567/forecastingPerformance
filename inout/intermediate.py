@@ -17,20 +17,19 @@ class IntermediateProvider:
         series.to_csv(IntermediateProvider.get_csv_path(name), index_label=["Date"], header=["Values"])
 
     @staticmethod
-    def save_latex(latex: str, path: str, name: str):
+    def save_csv(df, path, name):
         os.makedirs(path, exist_ok=True)
-        latex_file = open(os.path.join(path, name) + ".tex", "w")
-        latex_file.write(latex)
-        latex_file.close()
+        df.to_csv(os.path.join(path, name + ".csv"))
 
     @staticmethod
-    def save_as_tex(df: DataFrame, path: str, name: str):
+    def save_as_tex(df: DataFrame, path: str, name: str, precision: int):
         os.makedirs(path, exist_ok=True)
+        float_format = "{:." + str(precision) + "}"
         latex = df.to_latex(index=False,
                             formatters={"name": str.upper},
-                            float_format="{:.2f}".format)
+                            float_format=float_format.format)
 
-        latex_file = open(os.path.join(path, name), "w")
+        latex_file = open(os.path.join(path, name) + ".tex", "w")
         latex_file.write(latex)
         latex_file.close()
 

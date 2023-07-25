@@ -31,7 +31,7 @@ for file_name in os.listdir(stock_path):
             coefficient_of_variation: np.std(series) / np.mean(series) * 100}
         df = concat([df, DataFrame([result])])
 
-name = "stock_stats.tex"
-IntermediateProvider.save_as_tex(df, aggregation_path, name)
+name = "stock_stats"
+IntermediateProvider.save_as_tex(df, aggregation_path, name, precision=2)
 
 print("DONE")
