@@ -22,7 +22,3 @@ def run_predictions():
         print("Script executed successfully!")
     else:
         print(f"Script execution failed with return code: {return_code}")
-
-
-if __name__ == '__main__':
-    app.run()

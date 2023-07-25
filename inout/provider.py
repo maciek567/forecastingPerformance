@@ -18,14 +18,14 @@ class YFinanceProvider:
 
     @staticmethod
     def save_as_csv(dataframe, name: str) -> None:
-        dataframe.to_csv(YFinanceProvider.get_csv_path(name))
+        dataframe.to_csv(YFinanceProvider.get_stock_csv_path(name))
 
     @staticmethod
     def load_csv(name: str) -> DataFrame:
-        return read_csv(YFinanceProvider.get_csv_path(name))
+        return read_csv(YFinanceProvider.get_stock_csv_path(name))
 
     @staticmethod
-    def get_csv_path(name: str) -> str:
+    def get_stock_csv_path(name: str) -> str:
         return os.path.join(stock_path, name) + ".csv"
 
     @staticmethod

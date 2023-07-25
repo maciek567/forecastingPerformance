@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=run_predictions
-#SBATCH --time=00:10:00
+#SBATCH --time=01:00:00
 #SBATCH --account=plgstockperformance-cpu
 #SBATCH --partition=plgrid
  
