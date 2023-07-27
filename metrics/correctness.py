@@ -4,7 +4,8 @@ from inout.paths import metrics_graphs_path
 from metrics.utils import MetricLevel
 from timeseries.enums import SeriesColumn, DeviationRange, DeviationSource, DeviationScale, Mitigation
 from timeseries.timeseries import StockMarketSeries
-from util.graphs import save_image, set_legend, TIME_DAYS_LABEL
+from timeseries.utils import normalize_with_columns
+from util.graphs import save_image, set_legend, TIME_DAYS_LABEL, METRIC_SCORE
 
 
 class HeinrichCorrectnessMetric:
@@ -16,16 +17,15 @@ class HeinrichCorrectnessMetric:
 
     @staticmethod
     def d(noised: float, real: float, alpha: float) -> float:
-        return pow(abs(noised - real) / max(abs(noised), abs(real)), alpha)
+        return pow(abs(noised - real) / max(abs(noised), abs(real)), alpha) if noised - real != 0.0 else 0.0
 
     def heinrich_values(self, noised: float, real: float, alpha: float) -> float:
         return 1 - self.d(noised, real, alpha)
 
     def heinrich_tuples(self, noised: dict, real: dict, alpha: dict, columns: list) -> float:
         quality_sum = 0
-        weights = self.stock.weights
-        weights = {column: weights[column] for column in columns} if columns else weights
-        weights_normalized = self.stock.normalize_weights(weights)
+        weights_normalized = normalize_with_columns(self.stock.weights, columns)
+
         for column in (SeriesColumn if columns is None else columns):
             quality_sum += self.heinrich_values(noised[column], real[column], alpha[column]) * weights_normalized[
                 column]
@@ -105,7 +105,7 @@ class HeinrichCorrectnessMetric:
         title = f"Heinrich metric {column} prices [{level.value}, {noise} noised{sensitiveness}]"
         ax.set_title(title)
         ax.set_xlabel(TIME_DAYS_LABEL)
-        ax.set_ylabel("Quality")
+        ax.set_ylabel(METRIC_SCORE)
         set_legend(ax)
         save_image(plt, title, metrics_graphs_path)
         plt.show()
@@ -115,7 +115,8 @@ class HeinrichCorrectnessMetric:
             return str(self.stock.noises.all_noises_strength[strength])
         else:
             return "\n" + str({column.value: strengths[strength] for column, strengths in
-                               self.stock.noises.partially_noised_strength.items()}).replace("\'", "")
+                               self.stock.noises.partially_noised_strength.items() if strengths[strength] != 0}) \
+                .replace("\'", "")
 
     @staticmethod
     def get_deviation_name():

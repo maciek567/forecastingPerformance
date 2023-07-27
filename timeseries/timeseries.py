@@ -7,6 +7,7 @@ from timeseries.enums import SeriesColumn, DeviationSource, DeviationRange, Miti
 from timeseries.incompleteness import IncompleteSeries
 from timeseries.noise import NoisedSeries
 from timeseries.obsolescence import ObsolescenceSeries
+from timeseries.utils import normalize_weights
 
 
 class StockMarketSeries:
@@ -23,7 +24,7 @@ class StockMarketSeries:
         self.columns = columns
         self.provider = IntermediateProvider()
         self.real_series = self.create_multiple_series()
-        self.weights = self.normalize_weights(weights)
+        self.weights = normalize_weights(weights)
         self.all_deviated_series = {}
         self.partially_deviated_series = {}
         self.mitigated_deviations_series = {}
@@ -74,10 +75,6 @@ class StockMarketSeries:
                 for column in SeriesColumn} | \
             {column: deviation.method(self.real_series[column], deviation.scale)
              for column, deviation in series_to_deviate.items()}
-
-    @staticmethod
-    def normalize_weights(weights):
-        return {column: weight / sum([w for w in weights.values()]) for column, weight in weights.items()}
 
     def cache_series_set(self):
        # self.provider.remove_current_files()

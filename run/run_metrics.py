@@ -13,13 +13,13 @@ alpha = {SeriesColumn.OPEN: 0.5,
          SeriesColumn.VOLUME: 1.0}
 declines = {SeriesColumn.OPEN: 0.4,
             SeriesColumn.CLOSE: 0.4,
-            SeriesColumn.ADJ_CLOSE: 0.3,
-            SeriesColumn.HIGH: 0.4,
-            SeriesColumn.LOW: 0.4,
-            SeriesColumn.VOLUME: 0.7}
+            SeriesColumn.ADJ_CLOSE: 0.5,
+            SeriesColumn.HIGH: 1.0,
+            SeriesColumn.LOW: 1.0,
+            SeriesColumn.VOLUME: 2.0}
 measurement_times = {DeviationScale.SLIGHTLY: 5,
-                     DeviationScale.MODERATELY: 200,
-                     DeviationScale.HIGHLY: 1000}
+                     DeviationScale.MODERATELY: 100,
+                     DeviationScale.HIGHLY: 400}
 
 for company_name in company_names:
     stock = create_stock(company_name)

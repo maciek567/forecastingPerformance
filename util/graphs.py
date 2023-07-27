@@ -7,6 +7,7 @@ from inout.paths import deviations_graph_path
 
 TIME_DAYS_LABEL = "Time, days"
 PRICE_USD_LABEL = "Price, USD"
+METRIC_SCORE = "Metric score"
 
 
 def set_legend(ax):

@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 import warnings
 from enum import Enum
 
@@ -21,6 +23,7 @@ class AggregationType(Enum):
 class MetricAggregation:
 
     def aggregate_results(self):
+        check_input_existence(metrics_scores_csv_path)
         results = self.collect_data_from_files()
         df = self.calculate_averages(results)
         name = self.determine_name()
@@ -88,6 +91,7 @@ class PredictionAggregation:
     ALL_ROWS_NUMBER = 16
 
     def aggregate_results(self):
+        check_input_existence(pred_stats_csv_path)
         results = self.collect_data_from_files()
         df = self.calculate_averages(results)
         name = self.determine_name()
@@ -175,3 +179,12 @@ class PredictionAggregation:
     @staticmethod
     def split_times(series, number):
         return Series([[float(time) for time in times.split(" + ")][number] for times in series[avg_time_label]])
+
+
+def check_input_existence(path):
+    for file_name in os.listdir(path):
+        if file_name.endswith('.csv'):
+            break
+    else:
+        logging.exception(f" There are no .csv files in directory: {path}")
+        sys.exit(1)

@@ -5,7 +5,8 @@ from matplotlib import pyplot as plt
 from inout.paths import metrics_graphs_path
 from timeseries.enums import DeviationScale, SeriesColumn, Mitigation, DeviationRange, DeviationSource
 from timeseries.timeseries import StockMarketSeries
-from util.graphs import save_image, set_ticks_size
+from timeseries.utils import normalize_with_columns
+from util.graphs import TIME_DAYS_LABEL, METRIC_SCORE, save_image, set_legend
 
 
 class HeinrichTimelinessMetric:
@@ -71,6 +72,7 @@ class HeinrichTimelinessMetric:
             ages = {scale: {column: [] for column in SeriesColumn} for scale in DeviationScale}
             real, deviated = self.stock.determine_real_and_deviated_columns(DeviationRange.PARTIAL,
                                                                             DeviationSource.TIMELINESS, columns)
+            normalized_weights = normalize_with_columns(self.stock.weights, columns)
 
             for scale in DeviationScale:
                 for column in real:
@@ -79,35 +81,39 @@ class HeinrichTimelinessMetric:
                     time_diffs, ages[scale][column] = self.stock.obsolescence.get_ages(self.measurement_times[scale])
 
             return {scale: {Mitigation.NOT_MITIGATED: sum(
-                [self.timeliness_relations(self.declines, ages[scale][column]) * self.stock.weights[column]
+                [self.timeliness_relations(self.declines, ages[scale][column]) * normalized_weights[column]
                  for column in columns])}
                 for scale in DeviationScale}
 
-    def draw_timeliness_qualities(self, times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
+    @staticmethod
+    def draw_timeliness_qualities(times: dict, qualities: dict, column_name: SeriesColumn = None) -> None:
         column = column_name.value if column_name is not None else "all columns"
-        fig, ax = plt.subplots(3, 1, figsize=(4, 5))
-        fig.tight_layout(pad=0.5)
-        plt.sca(ax[0])
-        plt.xticks(*self.prepare_x_ticks(times[DeviationScale.SLIGHTLY]))
-        plt.sca(ax[1])
-        plt.xticks(*self.prepare_x_ticks(times[DeviationScale.MODERATELY]))
-        plt.sca(ax[2])
-        plt.xticks(*self.prepare_x_ticks(times[DeviationScale.HIGHLY]))
-        ax[0].plot(times[DeviationScale.SLIGHTLY], qualities[DeviationScale.SLIGHTLY], color="b", markersize=2)
-        ax[1].plot(times[DeviationScale.MODERATELY], qualities[DeviationScale.MODERATELY], color="g", markersize=2)
-        ax[2].plot(times[DeviationScale.HIGHLY], qualities[DeviationScale.HIGHLY], color="r", markersize=2)
+        fig = plt.figure(figsize=(10, 4))
+        ax = fig.add_subplot(111, axisbelow=True)
+        graph_size = len(times[DeviationScale.SLIGHTLY])
+        slightly_start = int(times[DeviationScale.HIGHLY][0]) - int(times[DeviationScale.SLIGHTLY][0])
+        moderately_start = int(times[DeviationScale.HIGHLY][0]) - int(times[DeviationScale.MODERATELY][0])
+
+        ax.plot([i for i in range(slightly_start, slightly_start + graph_size)],
+                qualities[DeviationScale.SLIGHTLY], color="b", markersize=2,
+                label=f"Slightly outdated: {int(times[DeviationScale.SLIGHTLY][-1]) - 1} days")
+        ax.plot([i for i in range(moderately_start, moderately_start + graph_size)],
+                qualities[DeviationScale.MODERATELY], color="g", markersize=2,
+                label=f"Moderately outdated: {int(times[DeviationScale.MODERATELY][-1]) - 1} days")
+        ax.plot([i for i in range(0, graph_size)],
+                qualities[DeviationScale.HIGHLY], color="r", markersize=2,
+                label=f"Highly outdated: {int(times[DeviationScale.HIGHLY][-1]) - 1} days")
+
+        ax.axvline(x=int(times[DeviationScale.HIGHLY][0]), color='black', label='Metric calculation timestamp',
+                   linestyle="--", linewidth='1')
+
         title = f"Timeliness metric {column} prices"
-        ax[0].set_title(title)
-        ax[2].set_xlabel("Days before measurement")
-        ax[1].set_ylabel("Quality")
-        set_ticks_size(ax, "both", 10)
+        ax.set_title(title)
+        ax.set_xlabel(TIME_DAYS_LABEL)
+        ax.set_ylabel(METRIC_SCORE)
+        set_legend(ax)
         save_image(plt, title, metrics_graphs_path)
         plt.show()
-
-    @staticmethod
-    def prepare_x_ticks(times):
-        return [i for i in range(0, len(times), len(times) // 6)], [i for i in times if
-                                                                    int(i) % (len(times) // 6) == 0]
 
     @staticmethod
     def get_deviation_name():
