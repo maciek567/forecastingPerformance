@@ -4,11 +4,12 @@ import sys
 import warnings
 from enum import Enum
 
+import numpy as np
 from pandas import read_csv, DataFrame, Series
 
 from inout.intermediate import IntermediateProvider
 from inout.paths import pred_stats_csv_path, metrics_scores_csv_path, aggregation_path_metrics, \
-    aggregation_path_predictions
+    aggregation_path_predictions, aggregation_path_predictions_comparison
 from metrics.utils import deviation_range_label, deviation_scale_label, mitigation_label, metric_score_label
 from predictions.model import avg_rmse_label, deviations_source_label, deviations_scale_label, \
     deviations_mitigation_label, avg_time_label, std_dev_time_label, avg_mitigation_time_label, avg_mape_label, \
@@ -17,7 +18,8 @@ from predictions.model import avg_rmse_label, deviations_source_label, deviation
 
 class AggregationType(Enum):
     PREDICTION = 0,
-    METRIC = 1
+    METRIC = 1,
+    COMPARISON = 2
 
 
 class MetricAggregation:
@@ -179,6 +181,35 @@ class PredictionAggregation:
     @staticmethod
     def split_times(series, number):
         return Series([[float(time) for time in times.split(" + ")][number] for times in series[avg_time_label]])
+
+
+class ComparisonAggregation:
+
+    def aggregate_results(self):
+        check_input_existence(aggregation_path_predictions_comparison)
+        self.show_time_increases()
+
+    @staticmethod
+    def show_time_increases():
+        for times in ["multiple_data_preparation_times", "multiple_prediction_times",
+                      "partial_data_preparation_times", "partial_prediction_times",
+                      "partial_mape"]:
+            series = read_csv(os.path.join(aggregation_path_predictions_comparison, times) + ".csv")
+            reference_key = series.keys().values[0]
+            keys_to_compare = series.keys().values[1:]
+            df = DataFrame(
+                {key: (series[key] - series[reference_key]) / series[reference_key] for key in keys_to_compare})
+            min_max = {key: {"min": str(np.argmin(df[key])) + ": " + str(np.round(np.min(df[key] * 100), 1)) + "%",
+                             "max": str(np.argmax(df[key])) + ": " + str(np.round(np.max(df[key] * 100), 1)) + "%",
+                             "avg": str(np.round(np.mean(df[key] * 100), 1)) + "%"}
+                       for key in keys_to_compare}
+            print(times)
+            print(df)
+            print(min_max)
+            print()
+
+            df_final = DataFrame(min_max).T.reset_index()
+            IntermediateProvider.save_as_tex(df_final, aggregation_path_predictions_comparison, times, precision=2)
 
 
 def check_input_existence(path):
