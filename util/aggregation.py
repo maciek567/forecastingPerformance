@@ -14,6 +14,7 @@ from metrics.utils import deviation_range_label, deviation_scale_label, mitigati
 from predictions.model import avg_rmse_label, deviations_source_label, deviations_scale_label, \
     deviations_mitigation_label, avg_time_label, std_dev_time_label, avg_mitigation_time_label, avg_mape_label, \
     avg_mae_label, number_label
+from timeseries.enums import DeviationSource, sources_short, scales_short, DeviationScale, mitigation_short, Mitigation
 
 
 class AggregationType(Enum):
@@ -137,14 +138,18 @@ class PredictionAggregation:
         return results
 
     def calculate_averages(self, results):
+        none, n = sources_short()[DeviationSource.NONE], sources_short()[DeviationSource.NOISE]
+        i, t = sources_short()[DeviationSource.INCOMPLETENESS], sources_short()[DeviationSource.TIMELINESS]
+        s, m, h = scales_short()[DeviationScale.SLIGHTLY], scales_short()[DeviationScale.MODERATELY], scales_short()[DeviationScale.HIGHLY]
+        no, yes = mitigation_short()[Mitigation.NOT_MITIGATED], mitigation_short()[Mitigation.MITIGATED]
         aggregated = {
             number_label: [i for i in range(1, 17)],
             deviations_source_label: Series(
-                ["-", "N", "N", "N", "N", "N", "N", "I", "I", "I", "I", "I", "I", "T", "T", "T"]),
+                [none, n, n, n, n, n, n, i, i, i, i, i, i, t, t, t]),
             deviations_scale_label: Series(
-                ["-", "S", "S", "M", "M", "H", "H", "S", "S", "M", "M", "H", "H", "S", "M", "H"]),
+                [none, s, s, m, m, h, h, s, s, m, m, h, h, s, m, h]),
             deviations_mitigation_label: Series(
-                ["N", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "Y", "N", "N", "N"])}
+                [no, no, yes, no, yes, no, yes, no, yes, no, yes, no, yes, no, no, no])}
 
         averages = {label: sum(results[label]) / len(results[label]) for label in
                     [self.avg_time_prepare_label, self.avg_time_model_label, self.avg_time_prediction_label,
@@ -191,10 +196,10 @@ class ComparisonAggregation:
 
     @staticmethod
     def show_time_increases():
-        for times in ["multiple_data_preparation_times", "multiple_prediction_times",
-                      "partial_data_preparation_times", "partial_prediction_times",
-                      "partial_mape"]:
-            series = read_csv(os.path.join(aggregation_path_predictions_comparison, times) + ".csv")
+        for file_name in ["multiple_data_preparation_times", "multiple_prediction_times",
+                          "partial_data_preparation_times", "partial_prediction_times", "partial_mape",
+                          "performance_data_preparation_times", "performance_model_training_times", "performance_mape"]:
+            series = read_csv(os.path.join(aggregation_path_predictions_comparison, file_name) + ".csv")
             reference_key = series.keys().values[0]
             keys_to_compare = series.keys().values[1:]
             df = DataFrame(
@@ -203,13 +208,13 @@ class ComparisonAggregation:
                              "max": str(np.argmax(df[key])) + ": " + str(np.round(np.max(df[key] * 100), 1)) + "%",
                              "avg": str(np.round(np.mean(df[key] * 100), 1)) + "%"}
                        for key in keys_to_compare}
-            print(times)
+            print(file_name)
             print(df)
             print(min_max)
             print()
 
             df_final = DataFrame(min_max).T.reset_index()
-            IntermediateProvider.save_as_tex(df_final, aggregation_path_predictions_comparison, times, precision=2)
+            IntermediateProvider.save_as_tex(df_final, aggregation_path_predictions_comparison, file_name, precision=2)
 
 
 def check_input_existence(path):

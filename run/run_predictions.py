@@ -1,16 +1,14 @@
-import sys
-
 from inout.provider import possible_start_dates
 from predictions.hpc.mlSpark import XGBoostSpark
 from predictions.hpc.statsSpark import AutoArimaSpark, CesSpark
 from predictions.model import PredictionModel
-from predictions.normal.ml import XGBoost
-from predictions.normal.nn import Reservoir, NHits
-from predictions.normal.stats import AutoArima, Ces, Garch
+from predictions.pc.ml import XGBoost
+from predictions.pc.nn import Reservoir, NHits
+from predictions.pc.stats import AutoArima, Ces, Garch
 from run.configuration import company_names, create_stock, columns
-from timeseries.enums import DeviationSource, DeviationScale, DeviationRange, SeriesColumn
+from timeseries.enums import DeviationSource, DeviationScale, DeviationRange
 
-# methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
+all_methods = [AutoArima, Ces, Garch, XGBoost, Reservoir, NHits, AutoArimaSpark, CesSpark, XGBoostSpark]
 
 prediction_start = 1500
 iterations = 3
@@ -22,7 +20,6 @@ scales = [DeviationScale.SLIGHTLY, DeviationScale.MODERATELY, DeviationScale.HIG
 is_mitigation = True
 graph_start = 1400
 training_shifts = 0
-unique_ids = "--unique_ids" in sys.argv
 
 for company_name in company_names:
     for shift in range(0, training_shifts + 1):
@@ -31,7 +28,7 @@ for company_name in company_names:
         base_model = PredictionModel(stock, prediction_start, columns, graph_start, iterations=iterations,
                                      deviation_sources=sources, deviation_scale=scales,
                                      is_deviation_mitigation=is_mitigation, deviation_range=deviation_range,
-                                     unique_ids=unique_ids, is_save_predictions=True, shift=shift)
+                                     is_save_predictions=True, shift=shift)
         for method in methods:
             model = base_model.configure_model(method)
 
